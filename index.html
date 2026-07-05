@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blue Amsterdam Studio</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    :root {
+      --bg: #f5f4f0;
+      --card: #ffffff;
+      --card2: #eceae4;
+      --border: rgba(0,0,0,0.08);
+      --border-s: rgba(0,0,0,0.14);
+      --text: #1a1a1a;
+      --text2: #6b6560;
+      --text3: #9a9590;
+      --radius: 8px;
+      --acc: #BA7517;
+      --acc-bg: #FAEEDA;
+      --acc-bo: #EF9F27;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --ok-bo: #86efac;
+      --err: #991b1b;
+      --err-bg: #fee2e2;
+      --err-bo: #fca5a5;
+      --sent-bg: #FAEEDA; --sent-co: #BA7517; --sent-bo: #EF9F27;
+      --hold-bg: #dbeafe; --hold-co: #1e40af; --hold-bo: #93c5fd;
+      --passed-bg: #f3f4f6; --passed-co: #6b7280; --passed-bo: #d1d5db;
+      --cut-bg: #dcfce7; --cut-co: #166534; --cut-bo: #86efac;
+    }
+    input, select, textarea, button { font-family: inherit; font-size: 14px; }
+    .inp {
+      width: 100%; padding: 8px 10px; color: var(--text);
+      background: var(--card); border: 0.5px solid var(--border-s);
+      border-radius: var(--radius); outline: none;
+    }
+    .inp:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(186,117,23,0.1); }
+    .lbl { display: block; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 6px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 13px; font-size: 13px; font-weight: 500;
+      border-radius: var(--radius); cursor: pointer; border: 0.5px solid;
+    }
+    .btn:hover { opacity: .88; }
+    .btn-acc { background: var(--acc-bg); color: var(--acc); border-color: var(--acc-bo); }
+    .btn-sec { background: var(--card2); color: var(--text2); border-color: var(--border-s); }
+    .btn-dan { background: var(--err-bg); color: var(--err); border-color: var(--err-bo); }
+    .card { background: var(--card); border: 0.5px solid var(--border); border-radius: 12px; padding: 20px; }
+    .chip { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; border: 0.5px solid; }
+    .metric { background: var(--card2); border-radius: var(--radius); padding: 12px 14px; }
+    .header { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .main { max-width: 760px; margin: 0 auto; padding: 28px 20px; }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .span2 { grid-column: span 2; }
+    .flex-end { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+    .back-btn { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; }
+    .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 14px; }
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .list-item { background: var(--card); border: 0.5px solid var(--border); border-radius: 12px; padding: 13px 15px; display: flex; align-items: center; gap: 14px; }
+    .empty { text-align: center; padding: 56px 0; color: var(--text3); }
+    .empty-icon { font-size: 32px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; color: var(--text2); margin-bottom: 4px; }
+    a { color: var(--acc); }
+    .err-box { background: var(--err-bg); border: 0.5px solid var(--err-bo); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--err); margin-bottom: 14px; }
+    .ok-box { background: var(--ok-bg); border: 0.5px solid var(--ok-bo); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ok); margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<div id="err" style="display:none;position:fixed;top:0;left:0;right:0;background:#fee2e2;color:#991b1b;padding:16px 20px;font-family:monospace;font-size:13px;z-index:9999;border-bottom:2px solid #fca5a5;white-space:pre-wrap;max-height:40vh;overflow:auto"></div>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var box = document.getElementById('err');
+  box.style.display = 'block';
+  box.textContent = 'JS Error: ' + msg + '\n(line ' + line + ')\n' + (err && err.stack ? err.stack : '');
+};
+window.onunhandledrejection = function(e) {
+  var box = document.getElementById('err');
+  box.style.display = 'block';
+  box.textContent = 'Unhandled promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+};
+</script>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+// Replace these two values with your Supabase project credentials.
+// Find them at: supabase.com → your project → Settings → API
+// The anon key is safe to include here — RLS policies protect your data.
+const SUPABASE_URL  = 'https://ydxriywpkkdptwcuqaaj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkeHJpeXdwa2tkcHR3Y3VxYWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Njc5NjYsImV4cCI6MjA5NDE0Mzk2Nn0.SYACMatBKKEZV0Wo3rJ6iPSzt0E14qXjT2DieUsG9Zk';
+
+const CONFIGURED = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
+let sb = null;
+try {
+  if (CONFIGURED) sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(err) { console.error('Supabase init failed:', err); }
+// ──────────────────────────────────────────────────────────────────────────
+
+const { useState, useEffect } = React;
+const h = React.createElement;
+
+// ─── DEFAULTS ─────────────────────────────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  email: '', phone: '',
+  paypal: { handle: '', link: '' },
+  venmo: { handle: '' },
+  zelle: { contact: '' },
+  rates: [
+    { id: 'r1', name: 'Half day (4 hrs)', amount: 400 },
+    { id: 'r2', name: 'Full day (8 hrs)', amount: 700 },
+    { id: 'r3', name: 'Mixing (per song)', amount: 150 },
+    { id: 'r4', name: 'Mastering (per song)', amount: 75 },
+  ]
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function genInv(n) { return `BA-${new Date().getFullYear()}-${String(n + 1).padStart(4, '0')}`; }
+function calcTotal(s) { return (s.lineItems || []).reduce((t, i) => t + (parseFloat(i.qty)||0)*(parseFloat(i.rate)||0), 0); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}); }
+
+// ─── DATA MAPPERS ─────────────────────────────────────────────────────────
+function dbToSession(db) {
+  return {
+    id: db.id, clientName: db.client_name || '', clientEmail: db.client_email || '',
+    songs: db.songs || '', dates: db.dates || '', notes: db.notes || '',
+    lineItems: db.line_items || [], status: db.status || 'draft',
+    invoiceNumber: db.invoice_number || '', createdAt: db.created_at
+  };
+}
+function sessionToDb(s, userId) {
+  return {
+    user_id: userId, client_name: s.clientName || '', client_email: s.clientEmail || '',
+    songs: s.songs || '', dates: s.dates || '', notes: s.notes || '',
+    line_items: s.lineItems || [], status: s.status || 'draft',
+    invoice_number: s.invoiceNumber || '', updated_at: new Date().toISOString()
+  };
+}
+function dbToSettings(db) {
+  if (!db) return DEFAULT_SETTINGS;
+  return {
+    email: db.email || '', phone: db.phone || '',
+    paypal: { handle: db.paypal_handle || '', link: db.paypal_link || '' },
+    venmo: { handle: db.venmo_handle || '' },
+    zelle: { contact: db.zelle_contact || '' },
+    rates: Array.isArray(db.rates) && db.rates.length ? db.rates : DEFAULT_SETTINGS.rates
+  };
+}
+function settingsToDb(s, userId) {
+  return {
+    user_id: userId, email: s.email || '', phone: s.phone || '',
+    paypal_handle: s.paypal?.handle || '', paypal_link: s.paypal?.link || '',
+    venmo_handle: s.venmo?.handle || '', zelle_contact: s.zelle?.contact || '',
+    rates: s.rates || [], updated_at: new Date().toISOString()
+  };
+}
+
+// ─── SUPABASE OPS ─────────────────────────────────────────────────────────
+async function fetchSessions() {
+  const { data, error } = await sb.from('ba_sessions').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(dbToSession);
+}
+async function insertSession(s, userId) {
+  const { error } = await sb.from('ba_sessions').insert(sessionToDb(s, userId));
+  if (error) throw error;
+}
+async function updateSession(s, userId) {
+  const { error } = await sb.from('ba_sessions').update(sessionToDb(s, userId)).eq('id', s.id);
+  if (error) throw error;
+}
+async function removeSession(id) {
+  const { error } = await sb.from('ba_sessions').delete().eq('id', id);
+  if (error) throw error;
+}
+async function patchStatus(id, status) {
+  const { error } = await sb.from('ba_sessions').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+async function fetchSettings(userId) {
+  const { data } = await sb.from('ba_settings').select('*').eq('user_id', userId).single();
+  return dbToSettings(data);
+}
+async function saveSettings(s, userId) {
+  const { error } = await sb.from('ba_settings').upsert(settingsToDb(s, userId), { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
+// ─── WFH CONTRACT ─────────────────────────────────────────────────────────
+function buildWFH(song, sw, dates, amt) {
+  return `Song: ${song||'___'}\n\nSongwriters: ${sw||'___'}\n\nSession Date(s): ${dates||'___'}\n\nThis letter constitutes the formal agreement ("Contract") between ${sw||'___'} ("Songwriters") and Mason Douglas ("Producer") whereby Producer is being hired for compensation to create and produce the above titled sound recording whereby Producer agrees to provide professional services as a WFH Musician for the purposes of making recordings ("Recordings"), all as hereinafter set forth.\n\nTERMS AND CONDITIONS:\n\n1. Compensation: At the completion of the contracted Recording Session Date(s) above, Producer will be paid via Paypal the total amount of: $${amt} Total for services, to be considered payment in full for the production of the Song.\n\n2. Non-Royalties: By entering into this contract and agreeing to the above compensation amount Producer agrees to give up any rights to any and all copyright Royalties/Monies earned by this project's recordings with the exception of a synchronization placement including but not limited to TV, Film, Movie, Soundtrack, Commercial, National Ad, Internet, and any other commercial exploitation that could be considered "sync", in which the Producer is entitled to a 25% Royalty on the Master license portion only. This "sync" Royalty, based on the total amount of the placement fee, shall be paid by the Songwriters after the placement fee has been received by the Songwriters, and does not require the Producer to be included in any clearance or negotiation of the placement. Unless otherwise noted, Producer has no claim on copyright of Song.\n\n3. Songwriters are not required to list Producer as rights-holder and are able to pitch the song as One-Stop. Songwriters are expected to make the applicable payment to Producer within 30 days of receiving payment for placement of the Song.\n\n4. Non-use of material: By accepting the above compensation amount, Producer agrees not to use any of the songs recorded at the above stated session without the expressed written consent of the Songwriters.\n\n5. Copyright: The Songwriters listed above own the Master copyright(s) to all songs recorded during the above date(s) and all recorded songs and recordings shall be the sole property of said Songwriters with the "sync" exception listed in Item 2 above being in consideration.\n\n6. Songwriters do not have permission and will not use the Producers name and/or picture/likeness in the commercial exploitation of this song (or as the Vocalist or Artist); However, Songwriters do have permission to use Producer's name in reference to the Producer's credit.\n\nI AGREE THAT AS A SESSION PRODUCER, I, MY HEIRS, LEGAL REPRESENTATIVES AND ASSIGNS HAVE NO CLAIMS TO ANY PART OF SUCH RECORDING WITH EXCEPTION TO SYNC USAGE DESCRIBED IN ITEM 2. I HAVE READ THIS RELEASE AND AM FULLY FAMILIAR WITH ITS CONTENTS.`;
+}
+
+// ─── PRINT INVOICE ────────────────────────────────────────────────────────
+function openPrintInvoice(session, settings) {
+  const total = calcTotal(session);
+  const ppLink = settings.paypal.link || (settings.paypal.handle ? `https://paypal.me/${settings.paypal.handle}` : '');
+  const vmLink = settings.venmo.handle ? `https://venmo.com/${settings.venmo.handle}` : '';
+  const zlLink = settings.zelle?.contact || '';
+  const q = d => `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(d)}&color=0D0D0D&bgcolor=FFFFFF`;
+  const pms = [
+    ppLink && `<div class="pm"><div class="pmn">PayPal</div><img src="${q(ppLink)}" width="110"><div class="pmh">${settings.paypal.handle?'@'+settings.paypal.handle:ppLink}</div></div>`,
+    vmLink && `<div class="pm"><div class="pmn">Venmo</div><img src="${q(vmLink)}" width="110"><div class="pmh">@${settings.venmo.handle}</div></div>`,
+    zlLink && `<div class="pm"><div class="pmn">Zelle</div><img src="${q('zelle:'+zlLink)}" width="110"><div class="pmh">${zlLink}</div></div>`,
+  ].filter(Boolean).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${session.invoiceNumber}</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;background:#fff;font-size:14px;line-height:1.5}
+.p{max-width:740px;margin:40px auto;padding:0 32px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:2px solid #C8902A;margin-bottom:24px}
+.logo{font-size:22px;font-weight:700;letter-spacing:-.5px}.tag{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-top:2px}
+.co{font-size:12px;color:#666;margin-top:6px}.inum{font-size:18px;font-weight:700;color:#C8902A;text-align:right}.idate{font-size:12px;color:#888;text-align:right;margin-top:2px}
+.badge{display:inline-block;background:#C8902A;color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-top:6px}
+.pts{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:20px}
+.lb{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#888;font-weight:600;margin-bottom:6px}.pn{font-size:16px;font-weight:600;margin-bottom:2px}.pd{font-size:13px;color:#555;line-height:1.6}
+.sb{background:#f8f7f5;border-radius:8px;padding:14px 18px;margin-bottom:20px}.sd{font-size:13px;color:#333;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px}th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;padding:8px 0;border-bottom:1px solid #e5e5e5;text-align:left;font-weight:600}
+td{padding:10px 0;font-size:14px;border-bottom:1px solid #f0f0f0;color:#333}td:last-child,th:last-child{text-align:right}
+.tw{display:flex;justify-content:flex-end;margin-bottom:28px}.ti{border-top:2px solid #111;padding-top:10px;min-width:190px;display:flex;justify-content:space-between;align-items:baseline}
+.tl{font-size:13px;color:#888}.ta{font-size:22px;font-weight:700;color:#C8902A}
+.pys{border-top:1px solid #e5e5e5;padding-top:20px;margin-bottom:36px}.pyt{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#888;font-weight:600;margin-bottom:14px}
+.pm-wrap{display:flex;gap:22px;flex-wrap:wrap}.pm{text-align:center}.pmn{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8902A;margin-bottom:6px}
+.pm img{border-radius:6px;border:1px solid #e5e5e5}.pmh{font-size:11px;color:#555;margin-top:4px}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body><div class="p">
+<div class="hdr">
+  <div><div class="logo">Blue Amsterdam Studio</div><div class="tag">Recording · Production · Publishing</div><div class="co">${[settings.email,settings.phone].filter(Boolean).join(' · ')}</div></div>
+  <div><div class="inum">${session.invoiceNumber}</div><div class="idate">${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div><div style="text-align:right"><div class="badge">${(session.status||'draft').toUpperCase()}</div></div></div>
+</div>
+<div class="pts">
+  <div><div class="lb">From</div><div class="pn">Mason Douglas</div><div class="pd">Producer / Engineer<br>Nashville, TN</div></div>
+  <div><div class="lb">Bill to</div><div class="pn">${session.clientName||''}</div><div class="pd">${session.clientEmail||''}</div></div>
+</div>
+<div class="sb">
+  <div class="lb" style="margin-bottom:10px">Session details</div>
+  ${session.songs?`<div class="sd"><strong>Song(s):</strong> ${session.songs}</div>`:''}
+  ${session.dates?`<div class="sd"><strong>Date(s):</strong> ${session.dates}</div>`:''}
+  ${session.notes?`<div class="sd"><strong>Notes:</strong> ${session.notes}</div>`:''}
+</div>
+<table><thead><tr><th>Service</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
+<tbody>${(session.lineItems||[]).map(i=>`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${parseFloat(i.rate).toFixed(2)}</td><td>$${(parseFloat(i.qty)*parseFloat(i.rate)).toFixed(2)}</td></tr>`).join('')}</tbody>
+</table>
+<div class="tw"><div class="ti"><span class="tl">Total due</span><span class="ta">$${total.toFixed(2)}</span></div></div>
+${pms?`<div class="pys"><div class="pyt">Payment methods</div><div class="pm-wrap">${pms}</div></div>`:''}
+</div><script>setTimeout(()=>window.print(),700)<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function openPrintWFH(session) {
+  const total = calcTotal(session);
+  const wfh = buildWFH(session.songs, session.clientName, session.dates, total.toFixed(2));
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>WFH Contract - ${session.invoiceNumber}</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;background:#fff;font-size:14px;line-height:1.5}
+.p{max-width:700px;margin:48px auto;padding:0 40px}
+.title{font-size:16px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.subtitle{font-size:12px;text-align:center;color:#888;margin-bottom:36px}
+.divider{border:none;border-top:2px solid #111;margin-bottom:28px}
+.body{font-size:13px;line-height:1.95;color:#222;white-space:pre-wrap;margin-bottom:48px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px;padding-top:36px;border-top:1px solid #ccc}
+.sl{height:48px;border-bottom:1px solid #111;margin-bottom:8px}
+.sn{font-size:12px;color:#444;font-weight:500}
+.sd{font-size:11px;color:#888;margin-top:14px}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body><div class="p">
+<div class="title">Work for Hire &amp; Sync Usage Contract</div>
+<div class="subtitle">Blue Amsterdam Studio &nbsp;·&nbsp; Mason Douglas, Producer</div>
+<hr class="divider">
+<div class="body">${wfh}</div>
+<div class="sigs">
+  <div><div class="sl"></div><div class="sn">Mason Douglas — Producer</div><div class="sd">Date: ____________________</div></div>
+  <div><div class="sl"></div><div class="sn">Songwriter / Client Signature</div><div class="sd">Date: ____________________</div></div>
+</div>
+</div><script>setTimeout(()=>window.print(),700)<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function openMailto(session, settings) {
+  const total = calcTotal(session);
+  const to = session.clientEmail || '';
+  const subject = encodeURIComponent('Invoice ' + session.invoiceNumber + ' — Blue Amsterdam Studio');
+  const phone = settings.phone ? '\n' + settings.phone : '';
+  const bodyText = 'Hi ' + (session.clientName || 'there') + ',\n\n'
+    + 'Please find your invoice and Work for Hire contract attached to this email as PDFs.\n\n'
+    + 'Invoice #: ' + session.invoiceNumber + '\n'
+    + 'Song(s): ' + (session.songs || '—') + '\n'
+    + 'Session date(s): ' + (session.dates || '—') + '\n'
+    + 'Total due: $' + total.toFixed(2) + '\n\n'
+    + 'Payment options are included on the invoice. Please sign and return the WFH contract at your convenience.\n\n'
+    + 'Thanks,\nMason Douglas\nBlue Amsterdam Studio' + phone;
+  const body = encodeURIComponent(bodyText);
+  window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + body;
+}
+
+// --- SHARED UI ---------------------------------------------------------------
+const STATUS_CFG = {
+  draft: { label:'Draft', bg:'var(--passed-bg)', co:'var(--passed-co)', bo:'var(--passed-bo)' },
+  sent:  { label:'Sent',  bg:'var(--sent-bg)',   co:'var(--sent-co)',   bo:'var(--sent-bo)'   },
+  paid:  { label:'Paid',  bg:'var(--cut-bg)',    co:'var(--ok)',        bo:'var(--ok-bo)'     },
+};
+
+function Badge({ status }) {
+  const s = STATUS_CFG[status] || STATUS_CFG.draft;
+  return h('span', { className:'chip', style:{ background:s.bg, color:s.co, borderColor:s.bo } }, s.label);
+}
+
+function Btn({ onClick, children, cls='sec', disabled, style }) {
+  return h('button', { onClick, disabled, className:`btn btn-${cls}`, style }, children);
+}
+
+// ─── SETUP SCREEN (shown when credentials not yet configured) ────────────────
+function SetupScreen() {
+  return React.createElement('div', { style:{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' } },
+    React.createElement('div', { style:{ width:'100%', maxWidth:440, padding:'0 20px', textAlign:'center' } },
+      React.createElement('div', { style:{ fontSize:24, fontWeight:700, color:'var(--acc)', letterSpacing:-.5, marginBottom:6 } }, 'Blue Amsterdam Studio'),
+      React.createElement('div', { style:{ fontSize:11, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginBottom:32 } }, 'Session Management'),
+      React.createElement('div', { className:'card', style:{ padding:28, textAlign:'left' } },
+        React.createElement('div', { style:{ fontSize:15, fontWeight:600, marginBottom:8 } }, 'Setup required'),
+        React.createElement('div', { style:{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:16 } },
+          'Open ', React.createElement('code', { style:{ background:'var(--card2)', padding:'1px 5px', borderRadius:4, fontSize:12 } }, 'index.html'),
+          ' and replace the two placeholder values near the top of the script:'
+        ),
+        React.createElement('pre', { style:{ background:'var(--card2)', borderRadius:'var(--radius)', padding:'12px 14px', fontSize:12, overflow:'auto', marginBottom:16, lineHeight:1.6 } },
+          "const SUPABASE_URL = 'https://xxxx.supabase.co';\nconst SUPABASE_ANON_KEY = 'eyJ...';" 
+        ),
+        React.createElement('div', { style:{ fontSize:12, color:'var(--text3)' } }, 'Find these values in your Supabase project under Settings → API.')
+      )
+    )
+  );
+}
+
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────
+function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    if (!email || !password) { setError('Enter your email and password.'); return; }
+    setLoading(true); setError('');
+    const { error: e } = await sb.auth.signInWithPassword({ email, password });
+    if (e) { setError(e.message); setLoading(false); }
+  };
+
+  return h('div', { style:{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' } },
+    h('div', { style:{ width:'100%', maxWidth:380, padding:'0 20px' } },
+      h('div', { style:{ textAlign:'center', marginBottom:32 } },
+        h('div', { style:{ fontSize:24, fontWeight:700, color:'var(--acc)', letterSpacing:-.5 } }, 'Blue Amsterdam Studio'),
+        h('div', { style:{ fontSize:11, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginTop:4 } }, 'Session Management')
+      ),
+      h('div', { className:'card', style:{ padding:28 } },
+        error && h('div', { className:'err-box' }, error),
+        h('div', { style:{ marginBottom:14 } },
+          h('label', { className:'lbl' }, 'Email'),
+          h('input', { className:'inp', type:'email', value:email, onChange:e=>setEmail(e.target.value), onKeyDown:e=>e.key==='Enter'&&handleLogin(), placeholder:'you@example.com', autoComplete:'email' })
+        ),
+        h('div', { style:{ marginBottom:20 } },
+          h('label', { className:'lbl' }, 'Password'),
+          h('input', { className:'inp', type:'password', value:password, onChange:e=>setPassword(e.target.value), onKeyDown:e=>e.key==='Enter'&&handleLogin(), placeholder:'••••••••', autoComplete:'current-password' })
+        ),
+        h('button', { onClick:handleLogin, disabled:loading, className:'btn btn-acc', style:{ width:'100%', justifyContent:'center', padding:'10px', fontSize:14 } }, loading ? 'Signing in...' : 'Sign in')
+      )
+    )
+  );
+}
+
+// ─── SESSIONS VIEW ────────────────────────────────────────────────────────
+function SessionsView({ sessions, onNew, onEdit, onView, onDelete, onStatus }) {
+  const paid = sessions.filter(s=>s.status==='paid').reduce((t,s)=>t+calcTotal(s),0);
+  const outstanding = sessions.filter(s=>s.status==='sent').reduce((t,s)=>t+calcTotal(s),0);
+  const counts = Object.fromEntries(Object.keys(STATUS_CFG).map(k=>[k,sessions.filter(s=>s.status===k).length]));
+
+  return h('div', null,
+    h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 } },
+      h('div', null,
+        h('h1', { style:{ fontSize:20, fontWeight:600, color:'var(--text)', margin:0 } }, 'Sessions'),
+        h('p', { style:{ fontSize:13, color:'var(--text2)', margin:'3px 0 0' } }, 'Session log and invoicing for Blue Amsterdam')
+      ),
+      h(Btn, { onClick:onNew, cls:'acc', style:{ fontSize:13, padding:'8px 15px' } }, '+ New session')
+    ),
+
+    h('div', { style:{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:22 } },
+      [
+        { label:'Total paid',    value:`$${paid.toLocaleString()}`,        sub:`${counts.paid||0} sessions` },
+        { label:'Outstanding',   value:`$${outstanding.toLocaleString()}`, sub:`${counts.sent||0} invoices` },
+        { label:'All sessions',  value: sessions.length,                   sub:'logged' },
+      ].map(m => h('div', { key:m.label, className:'metric' },
+        h('div', { style:{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:1, marginBottom:4 } }, m.label),
+        h('div', { style:{ fontSize:22, fontWeight:600, color:'var(--acc)' } }, m.value),
+        h('div', { style:{ fontSize:12, color:'var(--text3)', marginTop:2 } }, m.sub)
+      ))
+    ),
+
+    sessions.length === 0
+      ? h('div', { className:'empty' },
+          h('div', { className:'empty-icon' }, '🎛'),
+          h('div', { className:'empty-title' }, 'No sessions yet'),
+          h('div', { style:{ fontSize:13 } }, 'Add your first Blue Amsterdam session to get started')
+        )
+      : h('div', { className:'list' },
+          sessions.map(s => {
+            const total = calcTotal(s);
+            return h('div', { key:s.id, className:'list-item' },
+              h('div', { style:{ flex:1, minWidth:0 } },
+                h('div', { style:{ display:'flex', alignItems:'center', gap:8, marginBottom:4 } },
+                  h('span', { style:{ fontWeight:600, fontSize:15 } }, s.clientName || 'Unnamed client'),
+                  h(Badge, { status:s.status })
+                ),
+                h('div', { style:{ fontSize:13, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } },
+                  [s.songs, s.dates].filter(Boolean).join(' · ') || 'No details'
+                )
+              ),
+              h('div', { style:{ textAlign:'right', flexShrink:0 } },
+                h('div', { style:{ fontSize:18, fontWeight:600, color:'var(--acc)' } }, `$${total.toFixed(2)}`),
+                h('div', { style:{ fontSize:11, color:'var(--text3)' } }, s.invoiceNumber)
+              ),
+              h('div', { style:{ display:'flex', gap:5, flexShrink:0 } },
+                h(Btn, { onClick:()=>onView(s), cls:'acc' }, 'Invoice'),
+                h(Btn, { onClick:()=>onEdit(s) }, 'Edit'),
+                s.status !== 'paid' && h(Btn, { onClick:()=>onStatus(s.id, s.status==='draft'?'sent':'paid') },
+                  s.status==='draft' ? 'Mark sent' : 'Mark paid'
+                ),
+                h(Btn, { onClick:()=>{ if(confirm('Delete this session?')) onDelete(s.id); }, cls:'dan' }, '✕')
+              )
+            );
+          })
+        )
+  );
+}
+
+// ─── SESSION FORM ─────────────────────────────────────────────────────────
+function SessionForm({ session, settings, onSave, onCancel }) {
+  const [form, setForm] = useState(() => session || {
+    clientName:'', clientEmail:'', songs:'', dates:'', notes:'', lineItems:[], status:'draft'
+  });
+  const [ni, setNi] = useState({ name:'', qty:1, rate:'' });
+  const set = (k, v) => setForm(f => ({ ...f, [k]:v }));
+  const total = calcTotal(form);
+
+  const addPreset = r => setForm(f => ({ ...f, lineItems:[...(f.lineItems||[]), { id:genId(), name:r.name, qty:1, rate:r.amount }] }));
+  const addCustom = () => {
+    if (!ni.name || !ni.rate) return;
+    setForm(f => ({ ...f, lineItems:[...(f.lineItems||[]), { id:genId(), name:ni.name, qty:parseFloat(ni.qty)||1, rate:parseFloat(ni.rate) }] }));
+    setNi({ name:'', qty:1, rate:'' });
+  };
+  const removeItem = id => setForm(f => ({ ...f, lineItems:f.lineItems.filter(i=>i.id!==id) }));
+
+  return h('div', null,
+    h('div', { className:'row', style:{ marginBottom:22 } },
+      h('button', { onClick:onCancel, className:'back-btn' }, '← Back'),
+      h('h1', { style:{ fontSize:18, fontWeight:600, margin:0 } }, session ? 'Edit session' : 'New session')
+    ),
+
+    h('div', { className:'card', style:{ marginBottom:14 } },
+      h('div', { className:'grid2' },
+        h('div', null, h('label',{className:'lbl'},'Client name'), h('input',{className:'inp',value:form.clientName,onChange:e=>set('clientName',e.target.value),placeholder:'John Smith'})),
+        h('div', null, h('label',{className:'lbl'},'Client email'), h('input',{className:'inp',type:'email',value:form.clientEmail,onChange:e=>set('clientEmail',e.target.value),placeholder:'john@example.com'})),
+        h('div', null, h('label',{className:'lbl'},'Song(s)'), h('input',{className:'inp',value:form.songs,onChange:e=>set('songs',e.target.value),placeholder:'Song title(s)'})),
+        h('div', null, h('label',{className:'lbl'},'Session date(s)'), h('input',{className:'inp',value:form.dates,onChange:e=>set('dates',e.target.value),placeholder:'June 15, 2025'})),
+        h('div', null, h('label',{className:'lbl'},'Invoice number'), h('input',{className:'inp',value:form.invoiceNumber||'',onChange:e=>set('invoiceNumber',e.target.value),placeholder:'Auto-generated if blank'})),
+        h('div', null, h('label',{className:'lbl'},'Status'), h('select',{className:'inp',value:form.status||'draft',onChange:e=>set('status',e.target.value)}, h('option',{value:'draft'},'Draft'), h('option',{value:'sent'},'Sent'), h('option',{value:'paid'},'Paid'))),
+        h('div', { className:'span2' }, h('label',{className:'lbl'},'Notes'), h('textarea',{className:'inp',value:form.notes,onChange:e=>set('notes',e.target.value),placeholder:'Engineer, players, gear notes...',rows:2,style:{resize:'vertical'}}))
+      )
+    ),
+
+    h('div', { className:'card', style:{ marginBottom:14 } },
+      h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 } },
+        h('span', { className:'section-title', style:{margin:0} }, 'Services'),
+        h('span', { style:{ fontSize:18, fontWeight:600, color:'var(--acc)' } }, `Total: $${total.toFixed(2)}`)
+      ),
+      (settings.rates||[]).length > 0 && h('div', { style:{ marginBottom:12 } },
+        h('div', { style:{ fontSize:11, color:'var(--text3)', marginBottom:7 } }, 'Quick add from presets:'),
+        h('div', { style:{ display:'flex', flexWrap:'wrap', gap:6 } },
+          settings.rates.map(r => h('button', { key:r.id, onClick:()=>addPreset(r), className:'btn btn-sec', style:{fontSize:11} }, `${r.name} — $${r.amount}`))
+        )
+      ),
+      (form.lineItems||[]).length > 0 && h('div', { style:{ display:'flex', flexDirection:'column', gap:6, marginBottom:10 } },
+        form.lineItems.map(item => h('div', { key:item.id, style:{ display:'flex', alignItems:'center', gap:10, background:'var(--card2)', borderRadius:'var(--radius)', padding:'7px 12px' } },
+          h('span', { style:{ flex:1, fontSize:14 } }, item.name),
+          h('span', { style:{ fontSize:12, color:'var(--text3)' } }, `× ${item.qty}`),
+          h('span', { style:{ fontSize:14, fontWeight:600, color:'var(--acc)' } }, `$${(parseFloat(item.qty)*parseFloat(item.rate)).toFixed(2)}`),
+          h('button', { onClick:()=>removeItem(item.id), style:{ background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:16 } }, '✕')
+        ))
+      ),
+      h('div', { style:{ display:'flex', gap:8, alignItems:'flex-end' } },
+        h('div', { style:{flex:1} }, h('label',{style:{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:1,color:'var(--text3)',display:'block',marginBottom:5}},'Service'), h('input',{className:'inp',value:ni.name,onChange:e=>setNi(n=>({...n,name:e.target.value})),placeholder:'Custom service',onKeyDown:e=>e.key==='Enter'&&addCustom()})),
+        h('div', { style:{width:60} }, h('label',{style:{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:1,color:'var(--text3)',display:'block',marginBottom:5}},'Qty'), h('input',{className:'inp',type:'number',min:1,value:ni.qty,onChange:e=>setNi(n=>({...n,qty:e.target.value}))})),
+        h('div', { style:{width:90} }, h('label',{style:{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:1,color:'var(--text3)',display:'block',marginBottom:5}},'Rate $'), h('input',{className:'inp',type:'number',value:ni.rate,onChange:e=>setNi(n=>({...n,rate:e.target.value})),placeholder:'0',onKeyDown:e=>e.key==='Enter'&&addCustom()})),
+        h(Btn, { onClick:addCustom }, 'Add')
+      )
+    ),
+
+    h('div', { className:'flex-end' },
+      h('button', { onClick:onCancel, style:{ background:'none', border:'none', color:'var(--text2)', cursor:'pointer', padding:'8px 14px' } }, 'Cancel'),
+      h(Btn, { onClick:()=>onSave(form), cls:'acc', style:{ fontSize:14, padding:'8px 20px' } }, 'Save session')
+    )
+  );
+}
+
+// ─── INVOICE VIEW ─────────────────────────────────────────────────────────
+function InvoiceView({ session, settings, onBack, onEdit, onPrintInvoice, onPrintWFH, onEmail }) {
+  const total = calcTotal(session);
+  const ppLink = settings.paypal.link || (settings.paypal.handle ? `https://paypal.me/${settings.paypal.handle}` : '');
+  const vmLink = settings.venmo.handle ? `https://venmo.com/${settings.venmo.handle}` : '';
+  const zlLink = settings.zelle?.contact || '';
+  const qr = (d, sz=96) => `https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(d)}`;
+  const lbl = { fontSize:10, textTransform:'uppercase', letterSpacing:1.5, color:'var(--text3)', fontWeight:600, marginBottom:6 };
+
+  return h('div', null,
+    h('div', { className:'row', style:{ marginBottom:18 } },
+      h('button', { onClick:onBack, className:'back-btn' }, '← Sessions'),
+      h('div', { style:{flex:1} }),
+      h(Btn, { onClick:onEdit }, '✏ Edit'),
+      h(Btn, { onClick:onPrintInvoice, cls:'acc', style:{fontSize:13,padding:'7px 15px'} }, '🖨 Invoice PDF'),
+      h(Btn, { onClick:onPrintWFH, style:{fontSize:13,padding:'7px 15px'} }, '📋 WFH PDF'),
+      h(Btn, { onClick:onEmail, style:{fontSize:13,padding:'7px 15px'} }, '✉ Email client')
+    ),
+
+    h('div', { className:'card', style:{maxWidth:660} },
+      h('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', paddingBottom:18, borderBottom:`2px solid var(--acc-bo)`, marginBottom:22 } },
+        h('div', null,
+          h('div', { style:{ fontSize:20, fontWeight:700, color:'var(--acc)', letterSpacing:-.3 } }, 'Blue Amsterdam Studio'),
+          h('div', { style:{ fontSize:10, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginTop:3 } }, 'Recording · Production · Publishing'),
+          settings.email && h('div', { style:{ fontSize:12, color:'var(--text2)', marginTop:8 } }, settings.email),
+          settings.phone && h('div', { style:{ fontSize:12, color:'var(--text2)' } }, settings.phone)
+        ),
+        h('div', { style:{textAlign:'right'} },
+          h('div', { style:{ fontSize:18, fontWeight:600 } }, session.invoiceNumber),
+          h('div', { style:{ fontSize:12, color:'var(--text3)', marginTop:2 } }, new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})),
+          h('div', { style:{marginTop:6} }, h(Badge, { status:session.status }))
+        )
+      ),
+
+      h('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:28, marginBottom:18 } },
+        h('div', null, h('div',{style:lbl},'From'), h('div',{style:{fontSize:15,fontWeight:600}},'Mason Douglas'), h('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6}},'Producer / Engineer', h('br'), 'Nashville, TN')),
+        h('div', null, h('div',{style:lbl},'Bill to'), h('div',{style:{fontSize:15,fontWeight:600}},session.clientName), session.clientEmail && h('div',{style:{fontSize:13,color:'var(--text2)'}},session.clientEmail))
+      ),
+
+      (session.songs || session.dates || session.notes) && h('div', { style:{ background:'var(--card2)', borderRadius:'var(--radius)', padding:'11px 14px', marginBottom:18 } },
+        h('div', { style:lbl }, 'Session details'),
+        session.songs && h('div', { style:{fontSize:13,marginBottom:3} }, h('span',{style:{color:'var(--text3)'}},'Song(s): '), session.songs),
+        session.dates && h('div', { style:{fontSize:13,marginBottom:3} }, h('span',{style:{color:'var(--text3)'}},'Date(s): '), session.dates),
+        session.notes && h('div', { style:{fontSize:13} }, h('span',{style:{color:'var(--text3)'}},'Notes: '), session.notes)
+      ),
+
+      h('table', { style:{ width:'100%', borderCollapse:'collapse', marginBottom:14 } },
+        h('thead', null, h('tr', { style:{borderBottom:'0.5px solid var(--border-s)'} },
+          ['Service','Qty','Rate','Total'].map((col,i) => h('th', { key:col, style:{ fontSize:10, textTransform:'uppercase', letterSpacing:1, color:'var(--text3)', fontWeight:600, padding:'7px 0', textAlign:i===3?'right':'left' } }, col))
+        )),
+        h('tbody', null, (session.lineItems||[]).map(item =>
+          h('tr', { key:item.id, style:{borderBottom:'0.5px solid var(--border)'} },
+            h('td', { style:{padding:'9px 0',fontSize:14} }, item.name),
+            h('td', { style:{padding:'9px 0',fontSize:13,color:'var(--text2)'} }, item.qty),
+            h('td', { style:{padding:'9px 0',fontSize:13,color:'var(--text2)'} }, `$${parseFloat(item.rate).toFixed(2)}`),
+            h('td', { style:{padding:'9px 0',fontSize:14,fontWeight:600,textAlign:'right'} }, `$${(parseFloat(item.qty)*parseFloat(item.rate)).toFixed(2)}`)
+          )
+        ))
+      ),
+      h('div', { style:{ display:'flex', justifyContent:'flex-end', marginBottom:22 } },
+        h('div', { style:{ borderTop:'1.5px solid var(--border-s)', paddingTop:10, minWidth:200, display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:24 } },
+          h('span', { style:{fontSize:13,color:'var(--text3)'} }, 'Total due'),
+          h('span', { style:{fontSize:22,fontWeight:700,color:'var(--acc)'} }, `$${total.toFixed(2)}`)
+        )
+      ),
+
+      (ppLink||vmLink||zlLink) && h('div', { style:{ borderTop:'0.5px solid var(--border)', paddingTop:18, marginBottom:18 } },
+        h('div', { style:lbl }, 'Payment methods'),
+        h('div', { style:{ display:'flex', gap:20, flexWrap:'wrap' } },
+          ppLink && h('div', { style:{textAlign:'center'} }, h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'PayPal'), h('img',{src:qr(ppLink),alt:'PayPal QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}), h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},settings.paypal.handle?'@'+settings.paypal.handle:ppLink)),
+          vmLink && h('div', { style:{textAlign:'center'} }, h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Venmo'), h('img',{src:qr(vmLink),alt:'Venmo QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}), h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'@'+settings.venmo.handle)),
+          zlLink && h('div', { style:{textAlign:'center'} }, h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Zelle'), h('img',{src:qr('zelle:'+zlLink),alt:'Zelle QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}), h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},zlLink))
+        )
+      ),
+
+      h('div', { style:{ borderTop:'0.5px solid var(--border)', paddingTop:14 } },
+        h('div', { style:lbl }, 'WFH contract'),
+        h('div', { style:{ fontSize:12, color:'var(--text3)', lineHeight:1.6 } }, 'The full Work for Hire and Sync Usage Contract — pre-populated with this session\'s details — is included in the print / email output.')
+      )
+    )
+  );
+}
+
+// ─── SETTINGS VIEW ────────────────────────────────────────────────────────
+function SettingsView({ settings, onSave, userEmail, onLogout }) {
+  const [form, setForm] = useState(settings);
+  const [saved, setSaved] = useState(false);
+  const set = (path, val) => setForm(f => {
+    const p = path.split('.');
+    if (p.length === 1) return { ...f, [p[0]]:val };
+    return { ...f, [p[0]]:{ ...(f[p[0]]||{}), [p[1]]:val } };
+  });
+  const addRate = () => setForm(f => ({ ...f, rates:[...(f.rates||[]), { id:genId(), name:'', amount:0 }] }));
+  const remRate = id => setForm(f => ({ ...f, rates:f.rates.filter(r=>r.id!==id) }));
+  const upRate = (id, k, v) => setForm(f => ({ ...f, rates:f.rates.map(r=>r.id===id?{...r,[k]:v}:r) }));
+  const handleSave = () => { onSave(form); setSaved(true); setTimeout(()=>setSaved(false),2000); };
+
+  const card = { className:'card', style:{ marginBottom:14 } };
+
+  return h('div', { style:{maxWidth:540} },
+    h('h1', { style:{ fontSize:18, fontWeight:600, margin:'0 0 22px' } }, 'Settings'),
+
+    h('div', card,
+      h('div', { className:'section-title' }, 'Studio contact'),
+      h('div', { className:'grid2' },
+        h('div', null, h('label',{className:'lbl'},'Email'), h('input',{className:'inp',value:form.email||'',onChange:e=>set('email',e.target.value),placeholder:'studio@email.com'})),
+        h('div', null, h('label',{className:'lbl'},'Phone'), h('input',{className:'inp',value:form.phone||'',onChange:e=>set('phone',e.target.value),placeholder:'(615) 555-0100'}))
+      )
+    ),
+
+    h('div', card,
+      h('div', { className:'section-title' }, 'Payment handles'),
+      h('div', { className:'grid2' },
+        h('div', null, h('label',{className:'lbl'},'PayPal username'), h('input',{className:'inp',value:form.paypal?.handle||'',onChange:e=>set('paypal.handle',e.target.value),placeholder:'masondouglas'})),
+        h('div', null, h('label',{className:'lbl'},'PayPal.me link'), h('input',{className:'inp',value:form.paypal?.link||'',onChange:e=>set('paypal.link',e.target.value),placeholder:'https://paypal.me/...'})),
+        h('div', null, h('label',{className:'lbl'},'Venmo handle'), h('input',{className:'inp',value:form.venmo?.handle||'',onChange:e=>set('venmo.handle',e.target.value),placeholder:'masondouglas'})),
+        h('div', null, h('label',{className:'lbl'},'Zelle (phone or email)'), h('input',{className:'inp',value:form.zelle?.contact||'',onChange:e=>set('zelle.contact',e.target.value),placeholder:'(615) 555-0100'}))
+      )
+    ),
+
+    h('div', card,
+      h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 } },
+        h('div', { className:'section-title', style:{margin:0} }, 'Rate presets'),
+        h('button', { onClick:addRate, className:'btn btn-sec', style:{fontSize:11} }, '+ Add rate')
+      ),
+      h('div', { style:{ display:'flex', flexDirection:'column', gap:7 } },
+        (form.rates||[]).map(r => h('div', { key:r.id, style:{ display:'flex', gap:8, alignItems:'center' } },
+          h('input', { className:'inp', style:{flex:1}, value:r.name, onChange:e=>upRate(r.id,'name',e.target.value), placeholder:'Service name' }),
+          h('div', { style:{position:'relative',width:96} },
+            h('span', { style:{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' } }, '$'),
+            h('input', { className:'inp', style:{paddingLeft:22}, type:'number', value:r.amount, onChange:e=>upRate(r.id,'amount',parseFloat(e.target.value)||0) })
+          ),
+          h('button', { onClick:()=>remRate(r.id), style:{ background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:16 } }, '✕')
+        ))
+      )
+    ),
+
+    h('button', { onClick:handleSave, className:'btn', style:{ width:'100%', justifyContent:'center', padding:'10px', fontSize:14, marginBottom:16, background:saved?'var(--ok-bg)':'var(--acc-bg)', color:saved?'var(--ok)':'var(--acc)', borderColor:saved?'var(--ok-bo)':'var(--acc-bo)' } }, saved ? '✓ Saved' : 'Save settings'),
+
+    h('div', { className:'card', style:{ background:'var(--card2)' } },
+      h('div', { className:'section-title' }, 'Account'),
+      h('div', { style:{ fontSize:13, color:'var(--text2)', marginBottom:12 } }, `Signed in as ${userEmail}`),
+      h(Btn, { onClick:onLogout, cls:'dan' }, 'Sign out')
+    )
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────
+function MainApp({ user, sessions, settings, page, view, current, setPage, setView, setCurrent, goList, onSaveSession, onDeleteSession, onStatusChange, onSaveSettings, onLogout }) {
+
+  const TABS = [
+    { id:'sessions', label:'Sessions' },
+    { id:'settings', label:'Settings' },
+  ];
+
+  return h('div', null,
+    h('div', { className:'header' },
+      h('div', { onClick:goList, style:{cursor:'pointer'} },
+        h('div', { style:{ fontSize:15, fontWeight:700, color:'var(--acc)', letterSpacing:-.3 } }, 'Blue Amsterdam Studio'),
+        h('div', { style:{ fontSize:10, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginTop:1 } }, 'Session management')
+      ),
+      h('div', { style:{ display:'flex', gap:4 } },
+        TABS.map(t => h('button', { key:t.id, onClick:()=>{ setPage(t.id); goList(); }, style:{ padding:'6px 13px', fontSize:12, fontWeight:500, borderRadius:'var(--radius)', cursor:'pointer', border:'0.5px solid', background:page===t.id?'var(--acc-bg)':'transparent', color:page===t.id?'var(--acc)':'var(--text2)', borderColor:page===t.id?'var(--acc-bo)':'transparent' } }, t.label))
+      )
+    ),
+
+    h('div', { className:'main' },
+      page==='sessions' && view==='list' && h(SessionsView, { sessions, onNew:()=>{ setCurrent(null); setView('form'); }, onEdit:s=>{ setCurrent(s); setView('form'); }, onView:s=>{ setCurrent(s); setView('invoice'); }, onDelete:onDeleteSession, onStatus:onStatusChange }),
+      page==='sessions' && view==='form' && h(SessionForm, { session:current, settings, onCancel:goList, onSave:onSaveSession }),
+      page==='sessions' && view==='invoice' && current && h(InvoiceView, { session:current, settings, onBack:goList, onEdit:()=>setView('form'), onPrintInvoice:()=>openPrintInvoice(current, settings), onPrintWFH:()=>openPrintWFH(current), onEmail:()=>openMailto(current, settings) }),
+      page==='settings' && h(SettingsView, { settings, onSave:onSaveSettings, userEmail:user.email, onLogout })
+    )
+  );
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────
+function App() {
+  const [authState, setAuthState] = useState('loading');
+  const [user, setUser]           = useState(null);
+  const [page, setPage]           = useState('sessions');
+  const [view, setView]           = useState('list');
+  const [current, setCurrent]     = useState(null);
+  const [sessions, setSessions]   = useState([]);
+  const [settings, setSettings]   = useState(DEFAULT_SETTINGS);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [appError, setAppError]   = useState('');
+
+  useEffect(() => {
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) { setUser(session.user); setAuthState('authenticated'); }
+      else setAuthState('unauthenticated');
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_, session) => {
+      if (session?.user) { setUser(session.user); setAuthState('authenticated'); }
+      else { setUser(null); setAuthState('unauthenticated'); setSessions([]); setSettings(DEFAULT_SETTINGS); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (authState !== 'authenticated' || !user) return;
+    setDataLoading(true);
+    Promise.all([fetchSessions(), fetchSettings(user.id)])
+      .then(([s, cfg]) => { setSessions(s); setSettings(cfg); })
+      .catch(err => setAppError(err.message))
+      .finally(() => setDataLoading(false));
+  }, [authState, user?.id]);
+
+  const goList = () => { setView('list'); setCurrent(null); };
+
+  const handleSaveSession = async (form) => {
+    try {
+      if (current) {
+        await updateSession({ ...current, ...form }, user.id);
+      } else {
+        const invNum = genInv(sessions.length);
+        await insertSession({ ...form, invoiceNumber: invNum }, user.id);
+      }
+      const updated = await fetchSessions();
+      setSessions(updated);
+      // Update current if viewing invoice after edit
+      if (current && view === 'invoice') {
+        const freshSession = updated.find(s => s.id === current.id);
+        if (freshSession) setCurrent(freshSession);
+      }
+      goList();
+    } catch (err) { setAppError(err.message); }
+  };
+
+  const handleDeleteSession = async (id) => {
+    try { await removeSession(id); setSessions(s => s.filter(x => x.id !== id)); }
+    catch (err) { setAppError(err.message); }
+  };
+
+  const handleStatusChange = async (id, status) => {
+    try { await patchStatus(id, status); setSessions(s => s.map(x => x.id===id ? {...x,status} : x)); }
+    catch (err) { setAppError(err.message); }
+  };
+
+  const handleSaveSettings = async (s) => {
+    try { await saveSettings(s, user.id); setSettings(s); }
+    catch (err) { setAppError(err.message); }
+  };
+
+  if (!CONFIGURED) return h(SetupScreen);
+  if (authState === 'loading' || dataLoading) {
+    return h('div', { style:{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text3)', fontSize:14 } },
+      dataLoading ? 'Loading studio data...' : 'Loading...'
+    );
+  }
+  if (authState === 'unauthenticated') return h(LoginScreen);
+
+  return h('div', null,
+    appError && h('div', { style:{ background:'var(--err-bg)', borderBottom:'0.5px solid var(--err-bo)', padding:'10px 20px', fontSize:13, color:'var(--err)', display:'flex', alignItems:'center', justifyContent:'space-between' } },
+      `Error: ${appError}`,
+      h('button', { onClick:()=>setAppError(''), style:{ background:'none', border:'none', color:'var(--err)', cursor:'pointer', fontSize:16 } }, '✕')
+    ),
+    h(MainApp, {
+      user, sessions, settings, page, view, current,
+      setPage, setView, setCurrent, goList,
+      onSaveSession: handleSaveSession,
+      onDeleteSession: handleDeleteSession,
+      onStatusChange: handleStatusChange,
+      onSaveSettings: handleSaveSettings,
+      onLogout: () => sb.auth.signOut()
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blue Amsterdam Studio</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    :root {
+      --bg: #f5f4f0;
+      --card: #ffffff;
+      --card2: #eceae4;
+      --border: rgba(0,0,0,0.08);
+      --border-s: rgba(0,0,0,0.14);
+      --text: #1a1a1a;
+      --text2: #6b6560;
+      --text3: #9a9590;
+      --radius: 8px;
+      --acc: #BA7517;
+      --acc-bg: #FAEEDA;
+      --acc-bo: #EF9F27;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --ok-bo: #86efac;
+      --err: #991b1b;
+      --err-bg: #fee2e2;
+      --err-bo: #fca5a5;
+      --sent-bg: #FAEEDA; --sent-co: #BA7517; --sent-bo: #EF9F27;
+      --hold-bg: #dbeafe; --hold-co: #1e40af; --hold-bo: #93c5fd;
+      --passed-bg: #f3f4f6; --passed-co: #6b7280; --passed-bo: #d1d5db;
+      --cut-bg: #dcfce7; --cut-co: #166534; --cut-bo: #86efac;
+    }
+    input, select, textarea, button { font-family: inherit; font-size: 14px; }
+    .inp {
+      width: 100%; padding: 8px 10px; color: var(--text);
+      background: var(--card); border: 0.5px solid var(--border-s);
+      border-radius: var(--radius); outline: none;
+    }
+    .inp:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(186,117,23,0.1); }
+    .lbl { display: block; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 6px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 13px; font-size: 13px; font-weight: 500;
+      border-radius: var(--radius); cursor: pointer; border: 0.5px solid;
+    }
+    .btn:hover { opacity: .88; }
+    .btn-acc { background: var(--acc-bg); color: var(--acc); border-color: var(--acc-bo); }
+    .btn-sec { background: var(--card2); color: var(--text2); border-color: var(--border-s); }
+    .btn-dan { background: var(--err-bg); color: var(--err); border-color: var(--err-bo); }
+    .card { background: var(--card); border: 0.5px solid var(--border); border-radius: 12px; padding: 20px; }
+    .chip { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; border: 0.5px solid; }
+    .metric { background: var(--card2); border-radius: var(--radius); padding: 12px 14px; }
+    .header { background: var(--card); border-bottom: 0.5px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .main { max-width: 760px; margin: 0 auto; padding: 28px 20px; }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .span2 { grid-column: span 2; }
+    .flex-end { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+    .back-btn { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; }
+    .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 14px; }
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .list-item { background: var(--card); border: 0.5px solid var(--border); border-radius: 12px; padding: 13px 15px; display: flex; align-items: center; gap: 14px; }
+    .empty { text-align: center; padding: 56px 0; color: var(--text3); }
+    .empty-icon { font-size: 32px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; color: var(--text2); margin-bottom: 4px; }
+    a { color: var(--acc); }
+    .err-box { background: var(--err-bg); border: 0.5px solid var(--err-bo); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--err); margin-bottom: 14px; }
+    .ok-box { background: var(--ok-bg); border: 0.5px solid var(--ok-bo); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; color: var(--ok); margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<div id="err" style="display:none;position:fixed;top:0;left:0;right:0;background:#fee2e2;color:#991b1b;padding:16px 20px;font-family:monospace;font-size:13px;z-index:9999;border-bottom:2px solid #fca5a5;white-space:pre-wrap;max-height:40vh;overflow:auto"></div>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var box = document.getElementById('err');
+  box.style.display = 'block';
+  box.textContent = 'JS Error: ' + msg + '\n(line ' + line + ')\n' + (err && err.stack ? err.stack : '');
+};
+window.onunhandledrejection = function(e) {
+  var box = document.getElementById('err');
+  box.style.display = 'block';
+  box.textContent = 'Unhandled promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+};
+</script>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+// Replace these two values with your Supabase project credentials.
+// Find them at: supabase.com → your project → Settings → API
+// The anon key is safe to include here — RLS policies protect your data.
+const SUPABASE_URL  = 'https://ydxriywpkkdptwcuqaaj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkeHJpeXdwa2tkcHR3Y3VxYWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Njc5NjYsImV4cCI6MjA5NDE0Mzk2Nn0.SYACMatBKKEZV0Wo3rJ6iPSzt0E14qXjT2DieUsG9Zk';
+
+const CONFIGURED = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
+let sb = null;
+try {
+  if (CONFIGURED) sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(err) { console.error('Supabase init failed:', err); }
+// ──────────────────────────────────────────────────────────────────────────
+
+const { useState, useEffect } = React;
+const h = React.createElement;
+
+// ─── DEFAULTS ─────────────────────────────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  email: '', phone: '',
+  paypal: { handle: '', link: '' },
+  venmo: { handle: '' },
+  zelle: { contact: '' },
+  rates: [
+    { id: 'r1', name: 'Half day (4 hrs)', amount: 400 },
+    { id: 'r2', name: 'Full day (8 hrs)', amount: 700 },
+    { id: 'r3', name: 'Mixing (per song)', amount: 150 },
+    { id: 'r4', name: 'Mastering (per song)', amount: 75 },
+  ]
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function genInv(n) { return `BA-${new Date().getFullYear()}-${String(n + 1).padStart(4, '0')}`; }
+function calcTotal(s) { return (s.lineItems || []).reduce((t, i) => t + (parseFloat(i.qty)||0)*(parseFloat(i.rate)||0), 0); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}); }
+
+// ─── DATA MAPPERS ─────────────────────────────────────────────────────────
+function dbToSession(db) {
+  return {
+    id: db.id, clientName: db.client_name || '', clientEmail: db.client_email || '',
+    songs: db.songs || '', dates: db.dates || '', notes: db.notes || '',
+    lineItems: db.line_items || [], status: db.status || 'draft',
+    invoiceNumber: db.invoice_number || '', createdAt: db.created_at
+  };
+}
+function sessionToDb(s, userId) {
+  return {
+    user_id: userId, client_name: s.clientName || '', client_email: s.clientEmail || '',
+    songs: s.songs || '', dates: s.dates || '', notes: s.notes || '',
+    line_items: s.lineItems || [], status: s.status || 'draft',
+    invoice_number: s.invoiceNumber || '', updated_at: new Date().toISOString()
+  };
+}
+function dbToSettings(db) {
+  if (!db) return DEFAULT_SETTINGS;
+  return {
+    email: db.email || '', phone: db.phone || '',
+    paypal: { handle: db.paypal_handle || '', link: db.paypal_link || '' },
+    venmo: { handle: db.venmo_handle || '' },
+    zelle: { contact: db.zelle_contact || '' },
+    rates: Array.isArray(db.rates) && db.rates.length ? db.rates : DEFAULT_SETTINGS.rates
+  };
+}
+function settingsToDb(s, userId) {
+  return {
+    user_id: userId, email: s.email || '', phone: s.phone || '',
+    paypal_handle: s.paypal?.handle || '', paypal_link: s.paypal?.link || '',
+    venmo_handle: s.venmo?.handle || '', zelle_contact: s.zelle?.contact || '',
+    rates: s.rates || [], updated_at: new Date().toISOString()
+  };
+}
+
+// ─── SUPABASE OPS ─────────────────────────────────────────────────────────
+async function fetchSessions() {
+  const { data, error } = await sb.from('ba_sessions').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(dbToSession);
+}
+async function insertSession(s, userId) {
+  const { error } = await sb.from('ba_sessions').insert(sessionToDb(s, userId));
+  if (error) throw error;
+}
+async function updateSession(s, userId) {
+  const { error } = await sb.from('ba_sessions').update(sessionToDb(s, userId)).eq('id', s.id);
+  if (error) throw error;
+}
+async function removeSession(id) {
+  const { error } = await sb.from('ba_sessions').delete().eq('id', id);
+  if (error) throw error;
+}
+async function patchStatus(id, status) {
+  const { error } = await sb.from('ba_sessions').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+async function fetchSettings(userId) {
+  const { data } = await sb.from('ba_settings').select('*').eq('user_id', userId).single();
+  return dbToSettings(data);
+}
+async function saveSettings(s, userId) {
+  const { error } = await sb.from('ba_settings').upsert(settingsToDb(s, userId), { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
+// ─── WFH CONTRACT ─────────────────────────────────────────────────────────
+function buildWFH(song, sw, dates, amt) {
+  return `Song: ${song||'___'}\n\nSongwriters: ${sw||'___'}\n\nSession Date(s): ${dates||'___'}\n\nThis letter constitutes the formal agreement ("Contract") between ${sw||'___'} ("Songwriters") and Mason Douglas ("Producer") whereby Producer is being hired for compensation to create and produce the above titled sound recording whereby Producer agrees to provide professional services as a WFH Musician for the purposes of making recordings ("Recordings"), all as hereinafter set forth.\n\nTERMS AND CONDITIONS:\n\n1. Compensation: At the completion of the contracted Recording Session Date(s) above, Producer will be paid via Paypal the total amount of: $${amt} Total for services, to be considered payment in full for the production of the Song.\n\n2. Non-Royalties: By entering into this contract and agreeing to the above compensation amount Producer agrees to give up any rights to any and all copyright Royalties/Monies earned by this project's recordings with the exception of a synchronization placement including but not limited to TV, Film, Movie, Soundtrack, Commercial, National Ad, Internet, and any other commercial exploitation that could be considered "sync", in which the Producer is entitled to a 25% Royalty on the Master license portion only. This "sync" Royalty, based on the total amount of the placement fee, shall be paid by the Songwriters after the placement fee has been received by the Songwriters, and does not require the Producer to be included in any clearance or negotiation of the placement. Unless otherwise noted, Producer has no claim on copyright of Song.\n\n3. Songwriters are not required to list Producer as rights-holder and are able to pitch the song as One-Stop. Songwriters are expected to make the applicable payment to Producer within 30 days of receiving payment for placement of the Song.\n\n4. Non-use of material: By accepting the above compensation amount, Producer agrees not to use any of the songs recorded at the above stated session without the expressed written consent of the Songwriters.\n\n5. Copyright: The Songwriters listed above own the Master copyright(s) to all songs recorded during the above date(s) and all recorded songs and recordings shall be the sole property of said Songwriters with the "sync" exception listed in Item 2 above being in consideration.\n\n6. Songwriters do not have permission and will not use the Producers name and/or picture/likeness in the commercial exploitation of this song (or as the Vocalist or Artist); However, Songwriters do have permission to use Producer's name in reference to the Producer's credit.\n\nI AGREE THAT AS A SESSION PRODUCER, I, MY HEIRS, LEGAL REPRESENTATIVES AND ASSIGNS HAVE NO CLAIMS TO ANY PART OF SUCH RECORDING WITH EXCEPTION TO SYNC USAGE DESCRIBED IN ITEM 2. I HAVE READ THIS RELEASE AND AM FULLY FAMILIAR WITH ITS CONTENTS.`;
+}
+
+// ─── PRINT INVOICE ────────────────────────────────────────────────────────
+function openPrintInvoice(session, settings) {
+  const total = calcTotal(session);
+  const ppLink = settings.paypal.link || (settings.paypal.handle ? `https://paypal.me/${settings.paypal.handle}` : '');
+  const vmLink = settings.venmo.handle ? `https://venmo.com/${settings.venmo.handle}` : '';
+  const zlLink = settings.zelle?.contact || '';
+  const q = d => `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(d)}&color=0D0D0D&bgcolor=FFFFFF`;
+  const pms = [
+    ppLink && `<div class="pm"><div class="pmn">PayPal</div><img src="${q(ppLink)}" width="110"><div class="pmh">${settings.paypal.handle?'@'+settings.paypal.handle:ppLink}</div></div>`,
+    vmLink && `<div class="pm"><div class="pmn">Venmo</div><img src="${q(vmLink)}" width="110"><div class="pmh">@${settings.venmo.handle}</div></div>`,
+    zlLink && `<div class="pm"><div class="pmn">Zelle</div><img src="${q('zelle:'+zlLink)}" width="110"><div class="pmh">${zlLink}</div></div>`,
+  ].filter(Boolean).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${session.invoiceNumber}</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;background:#fff;font-size:14px;line-height:1.5}
+.p{max-width:740px;margin:40px auto;padding:0 32px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:2px solid #C8902A;margin-bottom:24px}
+.logo{font-size:22px;font-weight:700;letter-spacing:-.5px}.tag{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-top:2px}
+.co{font-size:12px;color:#666;margin-top:6px}.inum{font-size:18px;font-weight:700;color:#C8902A;text-align:right}.idate{font-size:12px;color:#888;text-align:right;margin-top:2px}
+.badge{display:inline-block;background:#C8902A;color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-top:6px}
+.pts{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:20px}
+.lb{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#888;font-weight:600;margin-bottom:6px}.pn{font-size:16px;font-weight:600;margin-bottom:2px}.pd{font-size:13px;color:#555;line-height:1.6}
+.sb{background:#f8f7f5;border-radius:8px;padding:14px 18px;margin-bottom:20px}.sd{font-size:13px;color:#333;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px}th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;padding:8px 0;border-bottom:1px solid #e5e5e5;text-align:left;font-weight:600}
+td{padding:10px 0;font-size:14px;border-bottom:1px solid #f0f0f0;color:#333}td:last-child,th:last-child{text-align:right}
+.tw{display:flex;justify-content:flex-end;margin-bottom:28px}.ti{border-top:2px solid #111;padding-top:10px;min-width:190px;display:flex;justify-content:space-between;align-items:baseline}
+.tl{font-size:13px;color:#888}.ta{font-size:22px;font-weight:700;color:#C8902A}
+.pys{border-top:1px solid #e5e5e5;padding-top:20px;margin-bottom:36px}.pyt{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#888;font-weight:600;margin-bottom:14px}
+.pm-wrap{display:flex;gap:22px;flex-wrap:wrap}.pm{text-align:center}.pmn{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8902A;margin-bottom:6px}
+.pm img{border-radius:6px;border:1px solid #e5e5e5}.pmh{font-size:11px;color:#555;margin-top:4px}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body><div class="p">
+<div class="hdr">
+  <div><div class="logo">Blue Amsterdam Studio</div><div class="tag">Recording · Production · Publishing</div><div class="co">${[settings.email,settings.phone].filter(Boolean).join(' · ')}</div></div>
+  <div><div class="inum">${session.invoiceNumber}</div><div class="idate">${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div><div style="text-align:right"><div class="badge">${(session.status||'draft').toUpperCase()}</div></div></div>
+</div>
+<div class="pts">
+  <div><div class="lb">From</div><div class="pn">Mason Douglas</div><div class="pd">Producer / Engineer<br>Nashville, TN</div></div>
+  <div><div class="lb">Bill to</div><div class="pn">${session.clientName||''}</div><div class="pd">${session.clientEmail||''}</div></div>
+</div>
+<div class="sb">
+  <div class="lb" style="margin-bottom:10px">Session details</div>
+  ${session.songs?`<div class="sd"><strong>Song(s):</strong> ${session.songs}</div>`:''}
+  ${session.dates?`<div class="sd"><strong>Date(s):</strong> ${session.dates}</div>`:''}
+  ${session.notes?`<div class="sd"><strong>Notes:</strong> ${session.notes}</div>`:''}
+</div>
+<table><thead><tr><th>Service</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
+<tbody>${(session.lineItems||[]).map(i=>`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${parseFloat(i.rate).toFixed(2)}</td><td>$${(parseFloat(i.qty)*parseFloat(i.rate)).toFixed(2)}</td></tr>`).join('')}</tbody>
+</table>
+<div class="tw"><div class="ti"><span class="tl">Total due</span><span class="ta">$${total.toFixed(2)}</span></div></div>
+${pms?`<div class="pys"><div class="pyt">Payment methods</div><div class="pm-wrap">${pms}</div></div>`:''}
+</div><script>setTimeout(()=>window.print(),700)<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function openPrintWFH(session) {
+  const total = calcTotal(session);
+  const wfh = buildWFH(session.songs, session.clientName, session.dates, total.toFixed(2));
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>WFH Contract - ${session.invoiceNumber}</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;background:#fff;font-size:14px;line-height:1.5}
+.p{max-width:700px;margin:48px auto;padding:0 40px}
+.title{font-size:16px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.subtitle{font-size:12px;text-align:center;color:#888;margin-bottom:36px}
+.divider{border:none;border-top:2px solid #111;margin-bottom:28px}
+.body{font-size:13px;line-height:1.95;color:#222;white-space:pre-wrap;margin-bottom:48px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px;padding-top:36px;border-top:1px solid #ccc}
+.sl{height:48px;border-bottom:1px solid #111;margin-bottom:8px}
+.sn{font-size:12px;color:#444;font-weight:500}
+.sd{font-size:11px;color:#888;margin-top:14px}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body><div class="p">
+<div class="title">Work for Hire &amp; Sync Usage Contract</div>
+<div class="subtitle">Blue Amsterdam Studio &nbsp;·&nbsp; Mason Douglas, Producer</div>
+<hr class="divider">
+<div class="body">${wfh}</div>
+<div class="sigs">
+  <div><div class="sl"></div><div class="sn">Mason Douglas — Producer</div><div class="sd">Date: ____________________</div></div>
+  <div><div class="sl"></div><div class="sn">Songwriter / Client Signature</div><div class="sd">Date: ____________________</div></div>
+</div>
+</div><script>setTimeout(()=>window.print(),700)<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function openMailto(session, settings) {
+  const total = calcTotal(session);
+  const to = session.clientEmail || '';
+  const subject = encodeURIComponent('Invoice ' + session.invoiceNumber + ' — Blue Amsterdam Studio');
+  const phone = settings.phone ? '\n' + settings.phone : '';
+  const bodyText = 'Hi ' + (session.clientName || 'there') + ',\n\n'
+    + 'Please find your invoice and Work for Hire contract attached to this email as PDFs.\n\n'
+    + 'Invoice #: ' + session.invoiceNumber + '\n'
+    + 'Song(s): ' + (session.songs || '—') + '\n'
+    + 'Session date(s): ' + (session.dates || '—') + '\n'
+    + 'Total due: $' + total.toFixed(2) + '\n\n'
+    + 'Payment options are included on the invoice. Please sign and return the WFH contract at your convenience.\n\n'
+    + 'Thanks,\nMason Douglas\nBlue Amsterdam Studio' + phone;
+  const body = encodeURIComponent(bodyText);
+  window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + body;
+}
+
+function Badge({ status }) {
+  const s = STATUS_CFG[status] || STATUS_CFG.draft;
+  return h('span', { className:'chip', style:{ background:s.bg, color:s.co, borderColor:s.bo } }, s.label);
+}
+
+function Btn({ onClick, children, cls='sec', disabled, style }) {
+  return h('button', { onClick, disabled, className:`btn btn-${cls}`, style }, children);
+}
+
+// ─── SETUP SCREEN (shown when credentials not yet configured) ────────────────
+function SetupScreen() {
+  return React.createElement('div', { style:{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' } },
+    React.createElement('div', { style:{ width:'100%', maxWidth:440, padding:'0 20px', textAlign:'center' } },
+      React.createElement('div', { style:{ fontSize:24, fontWeight:700, color:'var(--acc)', letterSpacing:-.5, marginBottom:6 } }, 'Blue Amsterdam Studio'),
+      React.createElement('div', { style:{ fontSize:11, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginBottom:32 } }, 'Session Management'),
+      React.createElement('div', { className:'card', style:{ padding:28, textAlign:'left' } },
+        React.createElement('div', { style:{ fontSize:15, fontWeight:600, marginBottom:8 } }, 'Setup required'),
+        React.createElement('div', { style:{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:16 } },
+          'Open ', React.createElement('code', { style:{ background:'var(--card2)', padding:'1px 5px', borderRadius:4, fontSize:12 } }, 'index.html'),
+          ' and replace the two placeholder values near the top of the script:'
+        ),
+        React.createElement('pre', { style:{ background:'var(--card2)', borderRadius:'var(--radius)', padding:'12px 14px', fontSize:12, overflow:'auto', marginBottom:16, lineHeight:1.6 } },
+          "const SUPABASE_URL = 'https://xxxx.supabase.co';\nconst SUPABASE_ANON_KEY = 'eyJ...';" 
+        ),
+        React.createElement('div', { style:{ fontSize:12, color:'var(--text3)' } }, 'Find these values in your Supabase project under Settings → API.')
+      )
+    )
+  );
+}
+
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────
+function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    if (!email || !password) { setError('Enter your email and password.'); return; }
+    setLoading(true); setError('');
+    const { error: e } = await sb.auth.signInWithPassword({ email, password });
+    if (e) { setError(e.message); setLoading(false); }
+  };
+
+  return h('div', { style:{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)' } },
+    h('div', { style:{ width:'100%', maxWidth:380, padding:'0 20px' } },
+      h('div', { style:{ textAlign:'center', marginBottom:32 } },
+        h('div', { style:{ fontSize:24, fontWeight:700, color:'var(--acc)', letterSpacing:-.5 } }, 'Blue Amsterdam Studio'),
+        h('div', { style:{ fontSize:11, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginTop:4 } }, 'Session Management')
+      ),
+      h('div', { className:'card', style:{ padding:28 } },
+        error && h('div', { className:'err-box' }, error),
+        h('div', { style:{ marginBottom:14 } },
+          h('label', { className:'lbl' }, 'Email'),
+          h('input', { className:'inp', type:'email', value:email, onChange:e=>setEmail(e.target.value), onKeyDown:e=>e.key==='Enter'&&handleLogin(), placeholder:'you@example.com', autoComplete:'email' })
+        ),
+        h('div', { style:{ marginBottom:20 } },
+          h('label', { className:'lbl' }, 'Password'),
+          h('input', { className:'inp', type:'password', value:password, onChange:e=>setPassword(e.target.value), onKeyDown:e=>e.key==='Enter'&&handleLogin(), placeholder:'••••••••', autoComplete:'current-password' })
+        ),
+        h('button', { onClick:handleLogin, disabled:loading, className:'btn btn-acc', style:{ width:'100%', justifyContent:'center', padding:'10px', fontSize:14 } }, loading ? 'Signing in...' : 'Sign in')
+      )
+    )
+  );
+}
+
+// ─── SESSIONS VIEW ────────────────────────────────────────────────────────
+function SessionsView({ sessions, onNew, onEdit, onView, onDelete, onStatus }) {
+  const paid = sessions.filter(s=>s.status==='paid').reduce((t,s)=>t+calcTotal(s),0);
+  const outstanding = sessions.filter(s=>s.status==='sent').reduce((t,s)=>t+calcTotal(s),0);
+  const counts = Object.fromEntries(Object.keys(STATUS_CFG).map(k=>[k,sessions.filter(s=>s.status===k).length]));
+
+  return h('div', null,
+    h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 } },
+      h('div', null,
+        h('h1', { style:{ fontSize:20, fontWeight:600, color:'var(--text)', margin:0 } }, 'Sessions'),
+        h('p', { style:{ fontSize:13, color:'var(--text2)', margin:'3px 0 0' } }, 'Session log and invoicing for Blue Amsterdam')
+      ),
+      h(Btn, { onClick:onNew, cls:'acc', style:{ fontSize:13, padding:'8px 15px' } }, '+ New session')
+    ),
+
+    h('div', { style:{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:22 } },
+      [
+        { label:'Total paid',    value:`$${paid.toLocaleString()}`,        sub:`${counts.paid||0} sessions` },
+        { label:'Outstanding',   value:`$${outstanding.toLocaleString()}`, sub:`${counts.sent||0} invoices` },
+        { label:'All sessions',  value: sessions.length,                   sub:'logged' },
+      ].map(m => h('div', { key:m.label, className:'metric' },
+        h('div', { style:{ fontSize:10, color:'var(--text3)', textTransform:'uppercase', letterSpacing:1, marginBottom:4 } }, m.label),
+        h('div', { style:{ fontSize:22, fontWeight:600, color:'var(--acc)' } }, m.value),
+        h('div', { style:{ fontSize:12, color:'var(--text3)', marginTop:2 } }, m.sub)
+      ))
+    ),
+
+    sessions.length === 0
+      ? h('div', { className:'empty' },
+          h('div', { className:'empty-icon' }, '🎛'),
+          h('div', { className:'empty-title' }, 'No sessions yet'),
+          h('div', { style:{ fontSize:13 } }, 'Add your first Blue Amsterdam session to get started')
+        )
+      : h('div', { className:'list' },
+          sessions.map(s => {
+            const total = calcTotal(s);
+            return h('div', { key:s.id, className:'list-item' },
+              h('div', { style:{ flex:1, minWidth:0 } },
+                h('div', { style:{ display:'flex', alignItems:'center', gap:8, marginBottom:4 } },
+                  h('span', { style:{ fontWeight:600, fontSize:15 } }, s.clientName || 'Unnamed client'),
+                  h(Badge, { status:s.status })
+                ),
+                h('div', { style:{ fontSize:13, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } },
+                  [s.songs, s.dates].filter(Boolean).join(' · ') || 'No details'
+                )
+              ),
+              h('div', { style:{ textAlign:'right', flexShrink:0 } },
+                h('div', { style:{ fontSize:18, fontWeight:600, color:'var(--acc)' } }, `$${total.toFixed(2)}`),
+                h('div', { style:{ fontSize:11, color:'var(--text3)' } }, s.invoiceNumber)
+              ),
+              h('div', { style:{ display:'flex', gap:5, flexShrink:0 } },
+                h(Btn, { onClick:()=>onView(s), cls:'acc' }, 'Invoice'),
+                h(Btn, { onClick:()=>onEdit(s) }, 'Edit'),
+                s.status !== 'paid' && h(Btn, { onClick:()=>onStatus(s.id, s.status==='draft'?'sent':'paid') },
+                  s.status==='draft' ? 'Mark sent' : 'Mark paid'
+                ),
+                h(Btn, { onClick:()=>{ if(confirm('Delete this session?')) onDelete(s.id); }, cls:'dan' }, '✕')
+              )
+            );
+          })
+        )
+  );
+}
+
+// ─── SESSION FORM ─────────────────────────────────────────────────────────
+function SessionForm({ session, settings, onSave, onCancel }) {
+  const [form, setForm] = useState(() => session || {
+    clientName:'', clientEmail:'', songs:'', dates:'', notes:'', lineItems:[], status:'draft'
+  });
+  const [ni, setNi] = useState({ name:'', qty:1, rate:'' });
+  const set = (k, v) => setForm(f => ({ ...f, [k]:v }));
+  const total = calcTotal(form);
+
+  const addPreset = r => setForm(f => ({ ...f, lineItems:[...(f.lineItems||[]), { id:genId(), name:r.name, qty:1, rate:r.amount }] }));
+  const addCustom = () => {
+    if (!ni.name || !ni.rate) return;
+    setForm(f => ({ ...f, lineItems:[...(f.lineItems||[]), { id:genId(), name:ni.name, qty:parseFloat(ni.qty)||1, rate:parseFloat(ni.rate) }] }));
+    setNi({ name:'', qty:1, rate:'' });
+  };
+  const removeItem = id => setForm(f => ({ ...f, lineItems:f.lineItems.filter(i=>i.id!==id) }));
+
+  return h('div', null,
+    h('div', { className:'row', style:{ marginBottom:22 } },
+      h('button', { onClick:onCancel, className:'back-btn' }, '← Back'),
+      h('h1', { style:{ fontSize:18, fontWeight:600, margin:0 } }, session ? 'Edit session' : 'New session')
+    ),
+
+    h('div', { className:'card', style:{ marginBottom:14 } },
+      h('div', { className:'grid2' },
+        h('div', null, h('label',{className:'lbl'},'Client name'), h('input',{className:'inp',value:form.clientName,onChange:e=>set('clientName',e.target.value),placeholder:'John Smith'})),
+        h('div', null, h('label',{className:'lbl'},'Client email'), h('input',{className:'inp',type:'email',value:form.clientEmail,onChange:e=>set('clientEmail',e.target.value),placeholder:'john@example.com'})),
+        h('div', null, h('label',{className:'lbl'},'Song(s)'), h('input',{className:'inp',value:form.songs,onChange:e=>set('songs',e.target.value),placeholder:'Song title(s)'})),
+        h('div', null, h('label',{className:'lbl'},'Session date(s)'), h('input',{className:'inp',value:form.dates,onChange:e=>set('dates',e.target.value),placeholder:'June 15, 2025'})),
+        h('div', null, h('label',{className:'lbl'},'Invoice number'), h('input',{className:'inp',value:form.invoiceNumber||'',onChange:e=>set('invoiceNumber',e.target.value),placeholder:'Auto-generated if blank'})),
+        h('div', null, h('label',{className:'lbl'},'Status'), h('select',{className:'inp',value:form.status||'draft',onChange:e=>set('status',e.target.value)}, h('option',{value:'draft'},'Draft'), h('option',{value:'sent'},'Sent'), h('option',{value:'paid'},'Paid'))),
+        h('div', { className:'span2' }, h('label',{className:'lbl'},'Notes'), h('textarea',{className:'inp',value:form.notes,onChange:e=>set('notes',e.target.value),placeholder:'Engineer, players, gear notes...',rows:2,style:{resize:'vertical'}}))
+      )
+    ),
+
+    h('div', { className:'card', style:{ marginBottom:14 } },
+      h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 } },
+        h('span', { className:'section-title', style:{margin:0} }, 'Services'),
+        h('span', { style:{ fontSize:18, fontWeight:600, color:'var(--acc)' } }, `Total: $${total.toFixed(2)}`)
+      ),
+      (settings.rates||[]).length > 0 && h('div', { style:{ marginBottom:12 } },
+        h('div', { style:{ fontSize:11, color:'var(--text3)', marginBottom:7 } }, 'Quick add from presets:'),
+        h('div', { style:{ display:'flex', flexWrap:'wrap', gap:6 } },
+          settings.rates.map(r => h('button', { key:r.id, onClick:()=>addPreset(r), className:'btn btn-sec', style:{fontSize:11} }, `${r.name} — $${r.amount}`))
+        )
+      ),
+      (form.lineItems||[]).length > 0 && h('div', { style:{ display:'flex', flexDirection:'column', gap:6, marginBottom:10 } },
+        form.lineItems.map(item => h('div', { key:item.id, style:{ display:'flex', alignItems:'center', gap:10, background:'var(--card2)', borderRadius:'var(--radius)', padding:'7px 12px' } },
+          h('span', { style:{ flex:1, fontSize:14 } }, item.name),
+          h('span', { style:{ fontSize:12, color:'var(--text3)' } }, `× ${item.qty}`),
+          h('span', { style:{ fontSize:14, fontWeight:600, color:'var(--acc)' } }, `$${(parseFloat(item.qty)*parseFloat(item.rate)).toFixed(2)}`),
+          h('button', { onClick:()=>removeItem(item.id), style:{ background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:16 } }, '✕')
+        ))
+      ),
+      h('div', { style:{ display:'flex', gap:8, alignItems:'flex-end' } },
+        h('div', { style:{flex:1} }, h('label',{style:{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:1,color:'var(--text3)',display:'block',marginBottom:5}},'Service'), h('input',{className:'inp',value:ni.name,onChange:e=>setNi(n=>({...n,name:e.target.value})),placeholder:'Custom service',onKeyDown:e=>e.key==='Enter'&&addCustom()})),
+        h('div', { style:{width:60} }, h('label',{style:{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:1,color:'var(--text3)',display:'block',marginBottom:5}},'Qty'), h('input',{className:'inp',type:'number',min:1,value:ni.qty,onChange:e=>setNi(n=>({...n,qty:e.target.value}))})),
+        h('div', { style:{width:90} }, h('label',{style:{fontSize:10,fontWeight:500,textTransform:'uppercase',letterSpacing:1,color:'var(--text3)',display:'block',marginBottom:5}},'Rate $'), h('input',{className:'inp',type:'number',value:ni.rate,onChange:e=>setNi(n=>({...n,rate:e.target.value})),placeholder:'0',onKeyDown:e=>e.key==='Enter'&&addCustom()})),
+        h(Btn, { onClick:addCustom }, 'Add')
+      )
+    ),
+
+    h('div', { className:'flex-end' },
+      h('button', { onClick:onCancel, style:{ background:'none', border:'none', color:'var(--text2)', cursor:'pointer', padding:'8px 14px' } }, 'Cancel'),
+      h(Btn, { onClick:()=>onSave(form), cls:'acc', style:{ fontSize:14, padding:'8px 20px' } }, 'Save session')
+    )
+  );
+}
+
+// ─── INVOICE VIEW ─────────────────────────────────────────────────────────
+function InvoiceView({ session, settings, onBack, onEdit, onPrintInvoice, onPrintWFH, onEmail }) {
+  const total = calcTotal(session);
+  const ppLink = settings.paypal.link || (settings.paypal.handle ? `https://paypal.me/${settings.paypal.handle}` : '');
+  const vmLink = settings.venmo.handle ? `https://venmo.com/${settings.venmo.handle}` : '';
+  const zlLink = settings.zelle?.contact || '';
+  const qr = (d, sz=96) => `https://api.qrserver.com/v1/create-qr-code/?size=${sz}x${sz}&data=${encodeURIComponent(d)}`;
+  const lbl = { fontSize:10, textTransform:'uppercase', letterSpacing:1.5, color:'var(--text3)', fontWeight:600, marginBottom:6 };
+
+  return h('div', null,
+    h('div', { className:'row', style:{ marginBottom:18 } },
+      h('button', { onClick:onBack, className:'back-btn' }, '← Sessions'),
+      h('div', { style:{flex:1} }),
+      h(Btn, { onClick:onEdit }, '✏ Edit'),
+      h(Btn, { onClick:onPrintInvoice, cls:'acc', style:{fontSize:13,padding:'7px 15px'} }, '🖨 Invoice PDF'),
+      h(Btn, { onClick:onPrintWFH, style:{fontSize:13,padding:'7px 15px'} }, '📋 WFH PDF'),
+      h(Btn, { onClick:onEmail, style:{fontSize:13,padding:'7px 15px'} }, '✉ Email client')
+    ),
+
+    h('div', { className:'card', style:{maxWidth:660} },
+      h('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', paddingBottom:18, borderBottom:`2px solid var(--acc-bo)`, marginBottom:22 } },
+        h('div', null,
+          h('div', { style:{ fontSize:20, fontWeight:700, color:'var(--acc)', letterSpacing:-.3 } }, 'Blue Amsterdam Studio'),
+          h('div', { style:{ fontSize:10, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginTop:3 } }, 'Recording · Production · Publishing'),
+          settings.email && h('div', { style:{ fontSize:12, color:'var(--text2)', marginTop:8 } }, settings.email),
+          settings.phone && h('div', { style:{ fontSize:12, color:'var(--text2)' } }, settings.phone)
+        ),
+        h('div', { style:{textAlign:'right'} },
+          h('div', { style:{ fontSize:18, fontWeight:600 } }, session.invoiceNumber),
+          h('div', { style:{ fontSize:12, color:'var(--text3)', marginTop:2 } }, new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})),
+          h('div', { style:{marginTop:6} }, h(Badge, { status:session.status }))
+        )
+      ),
+
+      h('div', { style:{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:28, marginBottom:18 } },
+        h('div', null, h('div',{style:lbl},'From'), h('div',{style:{fontSize:15,fontWeight:600}},'Mason Douglas'), h('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6}},'Producer / Engineer', h('br'), 'Nashville, TN')),
+        h('div', null, h('div',{style:lbl},'Bill to'), h('div',{style:{fontSize:15,fontWeight:600}},session.clientName), session.clientEmail && h('div',{style:{fontSize:13,color:'var(--text2)'}},session.clientEmail))
+      ),
+
+      (session.songs || session.dates || session.notes) && h('div', { style:{ background:'var(--card2)', borderRadius:'var(--radius)', padding:'11px 14px', marginBottom:18 } },
+        h('div', { style:lbl }, 'Session details'),
+        session.songs && h('div', { style:{fontSize:13,marginBottom:3} }, h('span',{style:{color:'var(--text3)'}},'Song(s): '), session.songs),
+        session.dates && h('div', { style:{fontSize:13,marginBottom:3} }, h('span',{style:{color:'var(--text3)'}},'Date(s): '), session.dates),
+        session.notes && h('div', { style:{fontSize:13} }, h('span',{style:{color:'var(--text3)'}},'Notes: '), session.notes)
+      ),
+
+      h('table', { style:{ width:'100%', borderCollapse:'collapse', marginBottom:14 } },
+        h('thead', null, h('tr', { style:{borderBottom:'0.5px solid var(--border-s)'} },
+          ['Service','Qty','Rate','Total'].map((col,i) => h('th', { key:col, style:{ fontSize:10, textTransform:'uppercase', letterSpacing:1, color:'var(--text3)', fontWeight:600, padding:'7px 0', textAlign:i===3?'right':'left' } }, col))
+        )),
+        h('tbody', null, (session.lineItems||[]).map(item =>
+          h('tr', { key:item.id, style:{borderBottom:'0.5px solid var(--border)'} },
+            h('td', { style:{padding:'9px 0',fontSize:14} }, item.name),
+            h('td', { style:{padding:'9px 0',fontSize:13,color:'var(--text2)'} }, item.qty),
+            h('td', { style:{padding:'9px 0',fontSize:13,color:'var(--text2)'} }, `$${parseFloat(item.rate).toFixed(2)}`),
+            h('td', { style:{padding:'9px 0',fontSize:14,fontWeight:600,textAlign:'right'} }, `$${(parseFloat(item.qty)*parseFloat(item.rate)).toFixed(2)}`)
+          )
+        ))
+      ),
+      h('div', { style:{ display:'flex', justifyContent:'flex-end', marginBottom:22 } },
+        h('div', { style:{ borderTop:'1.5px solid var(--border-s)', paddingTop:10, minWidth:200, display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:24 } },
+          h('span', { style:{fontSize:13,color:'var(--text3)'} }, 'Total due'),
+          h('span', { style:{fontSize:22,fontWeight:700,color:'var(--acc)'} }, `$${total.toFixed(2)}`)
+        )
+      ),
+
+      (ppLink||vmLink||zlLink) && h('div', { style:{ borderTop:'0.5px solid var(--border)', paddingTop:18, marginBottom:18 } },
+        h('div', { style:lbl }, 'Payment methods'),
+        h('div', { style:{ display:'flex', gap:20, flexWrap:'wrap' } },
+          ppLink && h('div', { style:{textAlign:'center'} }, h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'PayPal'), h('img',{src:qr(ppLink),alt:'PayPal QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}), h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},settings.paypal.handle?'@'+settings.paypal.handle:ppLink)),
+          vmLink && h('div', { style:{textAlign:'center'} }, h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Venmo'), h('img',{src:qr(vmLink),alt:'Venmo QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}), h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'@'+settings.venmo.handle)),
+          zlLink && h('div', { style:{textAlign:'center'} }, h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Zelle'), h('img',{src:qr('zelle:'+zlLink),alt:'Zelle QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}), h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},zlLink))
+        )
+      ),
+
+      h('div', { style:{ borderTop:'0.5px solid var(--border)', paddingTop:14 } },
+        h('div', { style:lbl }, 'WFH contract'),
+        h('div', { style:{ fontSize:12, color:'var(--text3)', lineHeight:1.6 } }, 'The full Work for Hire and Sync Usage Contract — pre-populated with this session\'s details — is included in the print / email output.')
+      )
+    )
+  );
+}
+
+// ─── SETTINGS VIEW ────────────────────────────────────────────────────────
+function SettingsView({ settings, onSave, userEmail, onLogout }) {
+  const [form, setForm] = useState(settings);
+  const [saved, setSaved] = useState(false);
+  const set = (path, val) => setForm(f => {
+    const p = path.split('.');
+    if (p.length === 1) return { ...f, [p[0]]:val };
+    return { ...f, [p[0]]:{ ...(f[p[0]]||{}), [p[1]]:val } };
+  });
+  const addRate = () => setForm(f => ({ ...f, rates:[...(f.rates||[]), { id:genId(), name:'', amount:0 }] }));
+  const remRate = id => setForm(f => ({ ...f, rates:f.rates.filter(r=>r.id!==id) }));
+  const upRate = (id, k, v) => setForm(f => ({ ...f, rates:f.rates.map(r=>r.id===id?{...r,[k]:v}:r) }));
+  const handleSave = () => { onSave(form); setSaved(true); setTimeout(()=>setSaved(false),2000); };
+
+  const card = { className:'card', style:{ marginBottom:14 } };
+
+  return h('div', { style:{maxWidth:540} },
+    h('h1', { style:{ fontSize:18, fontWeight:600, margin:'0 0 22px' } }, 'Settings'),
+
+    h('div', card,
+      h('div', { className:'section-title' }, 'Studio contact'),
+      h('div', { className:'grid2' },
+        h('div', null, h('label',{className:'lbl'},'Email'), h('input',{className:'inp',value:form.email||'',onChange:e=>set('email',e.target.value),placeholder:'studio@email.com'})),
+        h('div', null, h('label',{className:'lbl'},'Phone'), h('input',{className:'inp',value:form.phone||'',onChange:e=>set('phone',e.target.value),placeholder:'(615) 555-0100'}))
+      )
+    ),
+
+    h('div', card,
+      h('div', { className:'section-title' }, 'Payment handles'),
+      h('div', { className:'grid2' },
+        h('div', null, h('label',{className:'lbl'},'PayPal username'), h('input',{className:'inp',value:form.paypal?.handle||'',onChange:e=>set('paypal.handle',e.target.value),placeholder:'masondouglas'})),
+        h('div', null, h('label',{className:'lbl'},'PayPal.me link'), h('input',{className:'inp',value:form.paypal?.link||'',onChange:e=>set('paypal.link',e.target.value),placeholder:'https://paypal.me/...'})),
+        h('div', null, h('label',{className:'lbl'},'Venmo handle'), h('input',{className:'inp',value:form.venmo?.handle||'',onChange:e=>set('venmo.handle',e.target.value),placeholder:'masondouglas'})),
+        h('div', null, h('label',{className:'lbl'},'Zelle (phone or email)'), h('input',{className:'inp',value:form.zelle?.contact||'',onChange:e=>set('zelle.contact',e.target.value),placeholder:'(615) 555-0100'}))
+      )
+    ),
+
+    h('div', card,
+      h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 } },
+        h('div', { className:'section-title', style:{margin:0} }, 'Rate presets'),
+        h('button', { onClick:addRate, className:'btn btn-sec', style:{fontSize:11} }, '+ Add rate')
+      ),
+      h('div', { style:{ display:'flex', flexDirection:'column', gap:7 } },
+        (form.rates||[]).map(r => h('div', { key:r.id, style:{ display:'flex', gap:8, alignItems:'center' } },
+          h('input', { className:'inp', style:{flex:1}, value:r.name, onChange:e=>upRate(r.id,'name',e.target.value), placeholder:'Service name' }),
+          h('div', { style:{position:'relative',width:96} },
+            h('span', { style:{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text3)', pointerEvents:'none' } }, '$'),
+            h('input', { className:'inp', style:{paddingLeft:22}, type:'number', value:r.amount, onChange:e=>upRate(r.id,'amount',parseFloat(e.target.value)||0) })
+          ),
+          h('button', { onClick:()=>remRate(r.id), style:{ background:'none', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:16 } }, '✕')
+        ))
+      )
+    ),
+
+    h('button', { onClick:handleSave, className:'btn', style:{ width:'100%', justifyContent:'center', padding:'10px', fontSize:14, marginBottom:16, background:saved?'var(--ok-bg)':'var(--acc-bg)', color:saved?'var(--ok)':'var(--acc)', borderColor:saved?'var(--ok-bo)':'var(--acc-bo)' } }, saved ? '✓ Saved' : 'Save settings'),
+
+    h('div', { className:'card', style:{ background:'var(--card2)' } },
+      h('div', { className:'section-title' }, 'Account'),
+      h('div', { style:{ fontSize:13, color:'var(--text2)', marginBottom:12 } }, `Signed in as ${userEmail}`),
+      h(Btn, { onClick:onLogout, cls:'dan' }, 'Sign out')
+    )
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────
+function MainApp({ user, sessions, settings, page, view, current, setPage, setView, setCurrent, goList, onSaveSession, onDeleteSession, onStatusChange, onSaveSettings, onLogout }) {
+
+  const TABS = [
+    { id:'sessions', label:'Sessions' },
+    { id:'settings', label:'Settings' },
+  ];
+
+  return h('div', null,
+    h('div', { className:'header' },
+      h('div', { onClick:goList, style:{cursor:'pointer'} },
+        h('div', { style:{ fontSize:15, fontWeight:700, color:'var(--acc)', letterSpacing:-.3 } }, 'Blue Amsterdam Studio'),
+        h('div', { style:{ fontSize:10, textTransform:'uppercase', letterSpacing:2, color:'var(--text3)', marginTop:1 } }, 'Session management')
+      ),
+      h('div', { style:{ display:'flex', gap:4 } },
+        TABS.map(t => h('button', { key:t.id, onClick:()=>{ setPage(t.id); goList(); }, style:{ padding:'6px 13px', fontSize:12, fontWeight:500, borderRadius:'var(--radius)', cursor:'pointer', border:'0.5px solid', background:page===t.id?'var(--acc-bg)':'transparent', color:page===t.id?'var(--acc)':'var(--text2)', borderColor:page===t.id?'var(--acc-bo)':'transparent' } }, t.label))
+      )
+    ),
+
+    h('div', { className:'main' },
+      page==='sessions' && view==='list' && h(SessionsView, { sessions, onNew:()=>{ setCurrent(null); setView('form'); }, onEdit:s=>{ setCurrent(s); setView('form'); }, onView:s=>{ setCurrent(s); setView('invoice'); }, onDelete:onDeleteSession, onStatus:onStatusChange }),
+      page==='sessions' && view==='form' && h(SessionForm, { session:current, settings, onCancel:goList, onSave:onSaveSession }),
+      page==='sessions' && view==='invoice' && current && h(InvoiceView, { session:current, settings, onBack:goList, onEdit:()=>setView('form'), onPrintInvoice:()=>openPrintInvoice(current, settings), onPrintWFH:()=>openPrintWFH(current), onEmail:()=>openMailto(current, settings) }),
+      page==='settings' && h(SettingsView, { settings, onSave:onSaveSettings, userEmail:user.email, onLogout })
+    )
+  );
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────
+function App() {
+  const [authState, setAuthState] = useState('loading');
+  const [user, setUser]           = useState(null);
+  const [page, setPage]           = useState('sessions');
+  const [view, setView]           = useState('list');
+  const [current, setCurrent]     = useState(null);
+  const [sessions, setSessions]   = useState([]);
+  const [settings, setSettings]   = useState(DEFAULT_SETTINGS);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [appError, setAppError]   = useState('');
+
+  useEffect(() => {
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) { setUser(session.user); setAuthState('authenticated'); }
+      else setAuthState('unauthenticated');
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_, session) => {
+      if (session?.user) { setUser(session.user); setAuthState('authenticated'); }
+      else { setUser(null); setAuthState('unauthenticated'); setSessions([]); setSettings(DEFAULT_SETTINGS); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (authState !== 'authenticated' || !user) return;
+    setDataLoading(true);
+    Promise.all([fetchSessions(), fetchSettings(user.id)])
+      .then(([s, cfg]) => { setSessions(s); setSettings(cfg); })
+      .catch(err => setAppError(err.message))
+      .finally(() => setDataLoading(false));
+  }, [authState, user?.id]);
+
+  const goList = () => { setView('list'); setCurrent(null); };
+
+  const handleSaveSession = async (form) => {
+    try {
+      if (current) {
+        await updateSession({ ...current, ...form }, user.id);
+      } else {
+        const invNum = genInv(sessions.length);
+        await insertSession({ ...form, invoiceNumber: invNum }, user.id);
+      }
+      const updated = await fetchSessions();
+      setSessions(updated);
+      // Update current if viewing invoice after edit
+      if (current && view === 'invoice') {
+        const freshSession = updated.find(s => s.id === current.id);
+        if (freshSession) setCurrent(freshSession);
+      }
+      goList();
+    } catch (err) { setAppError(err.message); }
+  };
+
+  const handleDeleteSession = async (id) => {
+    try { await removeSession(id); setSessions(s => s.filter(x => x.id !== id)); }
+    catch (err) { setAppError(err.message); }
+  };
+
+  const handleStatusChange = async (id, status) => {
+    try { await patchStatus(id, status); setSessions(s => s.map(x => x.id===id ? {...x,status} : x)); }
+    catch (err) { setAppError(err.message); }
+  };
+
+  const handleSaveSettings = async (s) => {
+    try { await saveSettings(s, user.id); setSettings(s); }
+    catch (err) { setAppError(err.message); }
+  };
+
+  if (!CONFIGURED) return h(SetupScreen);
+  if (authState === 'loading' || dataLoading) {
+    return h('div', { style:{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text3)', fontSize:14 } },
+      dataLoading ? 'Loading studio data...' : 'Loading...'
+    );
+  }
+  if (authState === 'unauthenticated') return h(LoginScreen);
+
+  return h('div', null,
+    appError && h('div', { style:{ background:'var(--err-bg)', borderBottom:'0.5px solid var(--err-bo)', padding:'10px 20px', fontSize:13, color:'var(--err)', display:'flex', alignItems:'center', justifyContent:'space-between' } },
+      `Error: ${appError}`,
+      h('button', { onClick:()=>setAppError(''), style:{ background:'none', border:'none', color:'var(--err)', cursor:'pointer', fontSize:16 } }, '✕')
+    ),
+    h(MainApp, {
+      user, sessions, settings, page, view, current,
+      setPage, setView, setCurrent, goList,
+      onSaveSession: handleSaveSession,
+      onDeleteSession: handleDeleteSession,
+      onStatusChange: handleStatusChange,
+      onSaveSettings: handleSaveSettings,
+      onLogout: () => sb.auth.signOut()
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>
