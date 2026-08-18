@@ -483,7 +483,7 @@ function SessionsView(props){
 
 // ── SESSION FORM ──────────────────────────────────────────────────────────────
 function SessionForm(props){
-  var session=props.session,settings=props.settings,onSave=props.onSave,onCancel=props.onCancel,nextInvoice=props.nextInvoice,duplicateFrom=props.duplicateFrom;
+  var session=props.session,settings=props.settings,onSave=props.onSave,onCancel=props.onCancel,nextInvoice=props.nextInvoice,duplicateFrom=props.duplicateFrom,onStatus=props.onStatus;
   var _f=useState(function(){
     if(session) return session;
     if(duplicateFrom){
@@ -505,6 +505,12 @@ function SessionForm(props){
     setNi({name:'',qty:1,rate:''});
   }
   function removeItem(id){setForm(function(f){return Object.assign({},f,{lineItems:f.lineItems.filter(function(i){return i.id!==id;})});});}
+  function markSentFromForm(){
+    if(!session||!onStatus)return;
+    var next=form.status==='draft'?'sent':'paid';
+    onStatus(session.id,next);
+    set('status',next);
+  }
   return h('div',null,
     h('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:duplicateFrom&&!session?8:22}},
       h('button',{onClick:onCancel,style:{background:'none',border:'none',color:'var(--text2)',cursor:'pointer',fontSize:13}},'← Back'),
@@ -552,8 +558,11 @@ function SessionForm(props){
         h(Btn,{onClick:addCustom},'Add')
       )
     ),
-    h('div',{style:{display:'flex',justifyContent:'flex-end',gap:8,marginTop:4}},
+    h('div',{style:{display:'flex',justifyContent:'flex-end',gap:8,marginTop:4,flexWrap:'wrap'}},
+      session&&form.status!=='paid'&&h(Btn,{onClick:markSentFromForm,style:{fontSize:13}},form.status==='draft'?'✓ Mark sent':'✓ Mark paid'),
+      h('div',{style:{flex:1}}),
       h('button',{onClick:onCancel,style:{background:'none',border:'none',color:'var(--text2)',cursor:'pointer',padding:'8px 14px'}},'Cancel'),
+      h(Btn,{onClick:function(){onSave(form,{sendAfter:true});},style:{fontSize:14,padding:'8px 20px'}},'✉ Save & send'),
       h(Btn,{onClick:function(){onSave(form);},cls:'acc',style:{fontSize:14,padding:'8px 20px'}},'Save session')
     )
   );
@@ -561,7 +570,7 @@ function SessionForm(props){
 
 // ── INVOICE VIEW ──────────────────────────────────────────────────────────────
 function InvoiceView(props){
-  var session=props.session,settings=props.settings,onBack=props.onBack,onEdit=props.onEdit,onPrintInvoice=props.onPrintInvoice,onPrintWFH=props.onPrintWFH,onEmail=props.onEmail;
+  var session=props.session,settings=props.settings,onBack=props.onBack,onEdit=props.onEdit,onPrintInvoice=props.onPrintInvoice,onPrintWFH=props.onPrintWFH,onEmail=props.onEmail,onStatus=props.onStatus;
   var total=calcTotal(session);
   var ppLink=settings.paypal.link||(settings.paypal.handle?'https://paypal.me/'+settings.paypal.handle:'');
   var vmLink=settings.venmo.handle?'https://venmo.com/'+settings.venmo.handle:'';
@@ -572,6 +581,7 @@ function InvoiceView(props){
     h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:18,flexWrap:'wrap'}},
       h('button',{onClick:onBack,style:{background:'none',border:'none',color:'var(--text2)',cursor:'pointer',fontSize:13}},'← Sessions'),
       h('div',{style:{flex:1}}),
+      onStatus&&session.status!=='paid'&&h(Btn,{onClick:function(){onStatus(session.id,session.status==='draft'?'sent':'paid');},style:{fontSize:12}},session.status==='draft'?'✓ Mark sent':'✓ Mark paid'),
       h(Btn,{onClick:onEdit},'✏ Edit'),
       h(Btn,{onClick:onPrintInvoice,cls:'acc',style:{fontSize:12}},'🖨 Invoice PDF'),
       h(Btn,{onClick:onPrintWFH,style:{fontSize:12}},'📋 WFH PDF'),
@@ -738,17 +748,30 @@ function App(){
 
   function handleDuplicateSession(s){setCurrent(null);setDuplicateFrom(s);setView('form');}
 
-  function handleSaveSession(form){
+  function handleSaveSession(form,opts){
+    opts=opts||{};
     var invNum=form.invoiceNumber||genInv(sessions);
     var sessionData=Object.assign({},form,{invoiceNumber:invNum});
     var op=current?updateSession(Object.assign({},current,sessionData),user.id):insertSession(sessionData,user.id);
-    op.then(function(){return fetchSessions();}).then(function(updated){setSessions(updated);goList();}).catch(function(err){setAppError(err.message);});
+    op.then(function(){return fetchSessions();}).then(function(updated){
+      setSessions(updated);
+      if(opts.sendAfter){
+        var saved=updated.filter(function(s){return s.invoiceNumber===invNum;})[0]||sessionData;
+        openMailto(saved,settings);
+        setCurrent(saved);setDuplicateFrom(null);setView('invoice');
+      } else {
+        goList();
+      }
+    }).catch(function(err){setAppError(err.message);});
   }
   function handleDeleteSession(id){
     removeSession(id).then(function(){setSessions(function(s){return s.filter(function(x){return x.id!==id;});});}).catch(function(err){setAppError(err.message);});
   }
   function handleStatusChange(id,status){
-    patchStatus(id,status).then(function(){setSessions(function(s){return s.map(function(x){return x.id===id?Object.assign({},x,{status:status}):x;});});}).catch(function(err){setAppError(err.message);});
+    patchStatus(id,status).then(function(){
+      setSessions(function(s){return s.map(function(x){return x.id===id?Object.assign({},x,{status:status}):x;});});
+      setCurrent(function(c){return c&&c.id===id?Object.assign({},c,{status:status}):c;});
+    }).catch(function(err){setAppError(err.message);});
   }
   function handleSaveSettings(s){
     saveSettings(s,user.id).then(function(){setSettings(s);}).catch(function(err){setAppError(err.message);});
@@ -778,8 +801,8 @@ function App(){
     ),
     h('div',{className:'main'},
       page==='sessions'&&view==='list'&&h(SessionsView,{sessions:sessions,onNew:function(){setCurrent(null);setDuplicateFrom(null);setView('form');},onEdit:function(s){setCurrent(s);setDuplicateFrom(null);setView('form');},onView:function(s){setCurrent(s);setView('invoice');},onDelete:handleDeleteSession,onStatus:handleStatusChange,onDuplicate:handleDuplicateSession}),
-      page==='sessions'&&view==='form'&&h(SessionForm,{session:current,settings:settings,nextInvoice:genInv(sessions),duplicateFrom:duplicateFrom,onCancel:goList,onSave:handleSaveSession}),
-      page==='sessions'&&view==='invoice'&&current&&h(InvoiceView,{session:current,settings:settings,onBack:goList,onEdit:function(){setView('form');},onPrintInvoice:function(){openPrintInvoice(current,settings);},onPrintWFH:function(){openPrintWFH(current);},onEmail:function(){openMailto(current,settings);}}),
+      page==='sessions'&&view==='form'&&h(SessionForm,{session:current,settings:settings,nextInvoice:genInv(sessions),duplicateFrom:duplicateFrom,onCancel:goList,onSave:handleSaveSession,onStatus:handleStatusChange}),
+      page==='sessions'&&view==='invoice'&&current&&h(InvoiceView,{session:current,settings:settings,onBack:goList,onEdit:function(){setView('form');},onPrintInvoice:function(){openPrintInvoice(current,settings);},onPrintWFH:function(){openPrintWFH(current);},onEmail:function(){openMailto(current,settings);},onStatus:handleStatusChange}),
       page==='settings'&&h(SettingsView,{settings:settings,onSave:handleSaveSettings,userEmail:user.email,onLogout:function(){sb.auth.signOut();}})
     )
   );
