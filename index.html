@@ -173,7 +173,8 @@ async function patchStatus(id,status){
   if(r.error) throw r.error;
 }
 async function fetchSettings(userId){
-  var r=await sb.schema('session_log').from('ba_settings').select('*').eq('user_id',userId).single();
+  var r=await sb.schema('session_log').from('ba_settings').select('*').eq('user_id',userId).maybeSingle();
+  if(r.error) throw r.error;
   return dbToSettings(r.data);
 }
 async function saveSettings(s,userId){
