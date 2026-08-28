@@ -212,7 +212,7 @@ function openPrintInvoice(session,settings){
   if(ppLink) pms+='<div class="pm"><div class="pmn">PayPal</div><img src="'+qr(ppLink)+'" width="110"><div class="pmh">'+(settings.paypal.handle?'@'+settings.paypal.handle:ppLink)+'</div></div>';
   if(vmLink) pms+='<div class="pm"><div class="pmn">Venmo</div><img src="'+qr(vmLink)+'" width="110"><div class="pmh">@'+settings.venmo.handle+'</div></div>';
   if(zlLink) pms+='<div class="pm"><div class="pmn">Zelle</div><img src="'+qr('zelle:'+zlLink)+'" width="110"><div class="pmh">'+zlLink+'</div></div>';
-  if(wsLink) pms+='<div class="pm"><div class="pmn">Wise</div><img src="'+qr(wsLink)+'" width="110"><div class="pmh">wise.com</div></div>';
+  if(wsLink) pms+='<div class="pm"><div class="pmn">Wise</div><img src="'+qr(wsLink)+'" width="110"><div class="pmh">@douglasroberth17</div></div>';
   var rows='';
   (session.lineItems||[]).forEach(function(i){rows+='<tr><td>'+i.name+'</td><td>'+i.qty+'</td><td>$'+parseFloat(i.rate).toFixed(2)+'</td><td>$'+(parseFloat(i.qty)*parseFloat(i.rate)).toFixed(2)+'</td></tr>';});
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+session.invoiceNumber+'</title>'
@@ -644,7 +644,7 @@ function InvoiceView(props){
           ppLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'PayPal'),h('img',{src:qr(ppLink),alt:'PayPal QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},settings.paypal.handle?'@'+settings.paypal.handle:ppLink)),
           vmLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Venmo'),h('img',{src:qr(vmLink),alt:'Venmo QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'@'+settings.venmo.handle)),
           zlLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Zelle'),h('img',{src:qr('zelle:'+zlLink),alt:'Zelle QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},zlLink)),
-          wsLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Wise'),h('img',{src:qr(wsLink),alt:'Wise QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'wise.com'))
+          wsLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Wise'),h('img',{src:qr(wsLink),alt:'Wise QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'@douglasroberth17'))
         )
       ),
       h('div',{style:{borderTop:'0.5px solid var(--border)',paddingTop:14}},
