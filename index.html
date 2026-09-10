@@ -94,7 +94,8 @@ const STATUS_CFG = {
 
 const DEFAULT_SETTINGS = {
   email:'', phone:'', wfhUrl:'',
-  paypal:{handle:'',link:''}, venmo:{handle:''}, zelle:{contact:''}, wise:{link:''},
+  businessName:'', businessTagline:'', producerName:'', producerTitle:'', producerLocation:'',
+  paypal:{handle:'',link:''}, venmo:{handle:''}, zelle:{contact:''}, wise:{link:'',handle:''},
   rates:[
     {id:'r1',name:'Half day (4 hrs)',amount:400},
     {id:'r2',name:'Full day (8 hrs)',amount:700},
@@ -137,18 +138,23 @@ function sessionToDb(s,userId){
 function dbToSettings(db){
   if(!db) return DEFAULT_SETTINGS;
   return { email:db.email||'', phone:db.phone||'', wfhUrl:db.wfh_url||'',
+    businessName:db.business_name||'', businessTagline:db.business_tagline||'',
+    producerName:db.producer_name||'', producerTitle:db.producer_title||'', producerLocation:db.producer_location||'',
     paypal:{handle:db.paypal_handle||'',link:db.paypal_link||''},
     venmo:{handle:db.venmo_handle||''}, zelle:{contact:db.zelle_contact||''},
-    wise:{link:db.wise_link||''},
+    wise:{link:db.wise_link||'',handle:db.wise_handle||''},
     rates:Array.isArray(db.rates)&&db.rates.length?db.rates:DEFAULT_SETTINGS.rates };
 }
 function settingsToDb(s,userId){
   return { user_id:userId, email:s.email||'', phone:s.phone||'', wfh_url:s.wfhUrl||'',
+    business_name:s.businessName||'', business_tagline:s.businessTagline||'',
+    producer_name:s.producerName||'', producer_title:s.producerTitle||'', producer_location:s.producerLocation||'',
     paypal_handle:s.paypal&&s.paypal.handle?s.paypal.handle:'',
     paypal_link:s.paypal&&s.paypal.link?s.paypal.link:'',
     venmo_handle:s.venmo&&s.venmo.handle?s.venmo.handle:'',
     zelle_contact:s.zelle&&s.zelle.contact?s.zelle.contact:'',
     wise_link:s.wise&&s.wise.link?s.wise.link:'',
+    wise_handle:s.wise&&s.wise.handle?s.wise.handle:'',
     rates:s.rates||[], updated_at:new Date().toISOString() };
 }
 
@@ -185,11 +191,12 @@ async function saveSettings(s,userId){
 }
 
 // ── WFH CONTRACT ─────────────────────────────────────────────────────────────
-function buildWFH(song,sw,dates,amt){
+function buildWFH(song,sw,dates,amt,producerName){
+  var pName=producerName||'___';
   return 'Song: '+(song||'___')+'\n\n'
     +'Songwriters: '+(sw||'___')+'\n\n'
     +'Session Date(s): '+(dates||'___')+'\n\n'
-    +'This letter constitutes the formal agreement ("Contract") between '+(sw||'___')+' ("Songwriters") and Mason Douglas ("Producer") whereby Producer is being hired for compensation to create and produce the above titled sound recording whereby Producer agrees to provide professional services as a WFH Musician for the purposes of making recordings ("Recordings"), all as hereinafter set forth.\n\n'
+    +'This letter constitutes the formal agreement ("Contract") between '+(sw||'___')+' ("Songwriters") and '+pName+' ("Producer") whereby Producer is being hired for compensation to create and produce the above titled sound recording whereby Producer agrees to provide professional services as a WFH Musician for the purposes of making recordings ("Recordings"), all as hereinafter set forth.\n\n'
     +'TERMS AND CONDITIONS:\n\n'
     +'1. Compensation: At the completion of the contracted Recording Session Date(s) above, Producer will be paid via Paypal the total amount of: $'+amt+' Total for services, to be considered payment in full for the production of the Song.\n\n'
     +'2. Non-Royalties: By entering into this contract and agreeing to the above compensation amount Producer agrees to give up any rights to any and all copyright Royalties/Monies earned by this project\'s recordings with the exception of a synchronization placement including but not limited to TV, Film, Movie, Soundtrack, Commercial, National Ad, Internet, and any other commercial exploitation that could be considered "sync", in which the Producer is entitled to a 25% Royalty on the Master license portion only. This "sync" Royalty, based on the total amount of the placement fee, shall be paid by the Songwriters after the placement fee has been received by the Songwriters, and does not require the Producer to be included in any clearance or negotiation of the placement. Unless otherwise noted, Producer has no claim on copyright of Song.\n\n'
@@ -212,7 +219,7 @@ function openPrintInvoice(session,settings){
   if(ppLink) pms+='<div class="pm"><div class="pmn">PayPal</div><img src="'+qr(ppLink)+'" width="110"><div class="pmh">'+(settings.paypal.handle?'@'+settings.paypal.handle:ppLink)+'</div></div>';
   if(vmLink) pms+='<div class="pm"><div class="pmn">Venmo</div><img src="'+qr(vmLink)+'" width="110"><div class="pmh">@'+settings.venmo.handle+'</div></div>';
   if(zlLink) pms+='<div class="pm"><div class="pmn">Zelle</div><img src="'+qr('zelle:'+zlLink)+'" width="110"><div class="pmh">'+zlLink+'</div></div>';
-  if(wsLink) pms+='<div class="pm"><div class="pmn">Wise</div><img src="'+qr(wsLink)+'" width="110"><div class="pmh">@douglasroberth17</div></div>';
+  if(wsLink) pms+='<div class="pm"><div class="pmn">Wise</div><img src="'+qr(wsLink)+'" width="110"><div class="pmh">'+(settings.wise&&settings.wise.handle?'@'+settings.wise.handle:wsLink)+'</div></div>';
   var rows='';
   (session.lineItems||[]).forEach(function(i){rows+='<tr><td>'+i.name+'</td><td>'+i.qty+'</td><td>$'+parseFloat(i.rate).toFixed(2)+'</td><td>$'+(parseFloat(i.qty)*parseFloat(i.rate)).toFixed(2)+'</td></tr>';});
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+session.invoiceNumber+'</title>'
@@ -239,11 +246,11 @@ function openPrintInvoice(session,settings){
     +'.pm img{border-radius:6px;border:1px solid #e5e5e5}.pmh{font-size:11px;color:#555;margin-top:4px}'
     +'@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}'
     +'</style></head><body><div class="p">'
-    +'<div class="hdr"><div><div class="logo">Blue Amsterdam Studio</div><div class="tag">Recording &middot; Production &middot; Publishing</div>'
+    +'<div class="hdr"><div><div class="logo">'+(settings.businessName||'')+'</div><div class="tag">'+(settings.businessTagline||'')+'</div>'
     +'<div class="co">'+(settings.email&&settings.phone?settings.email+' &middot; '+settings.phone:settings.email||settings.phone||'')+'</div></div>'
     +'<div><div class="inum">'+session.invoiceNumber+'</div><div class="idate">'+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+'</div>'
     +'<div style="text-align:right"><div class="badge">'+(session.status||'draft').toUpperCase()+'</div></div></div></div>'
-    +'<div class="pts"><div><div class="lb">From</div><div class="pn">Mason Douglas</div><div class="pd">Producer / Engineer<br>Nashville, TN</div></div>'
+    +'<div class="pts"><div><div class="lb">From</div><div class="pn">'+(settings.producerName||'')+'</div><div class="pd">'+(settings.producerTitle||'')+(settings.producerTitle&&settings.producerLocation?'<br>':'')+(settings.producerLocation||'')+'</div></div>'
     +'<div><div class="lb">Bill to</div><div class="pn">'+(session.clientName||'')+'</div><div class="pd">'+(session.clientEmail||'')+'</div></div></div>'
     +'<div class="sb"><div class="lb" style="margin-bottom:10px">Session details</div>'
     +(session.songs?'<div class="sd"><strong>Song(s):</strong> '+session.songs+'</div>':'')
@@ -258,9 +265,11 @@ function openPrintInvoice(session,settings){
 }
 
 // ── PRINT: WFH CONTRACT ───────────────────────────────────────────────────────
-function openPrintWFH(session){
+function openPrintWFH(session,settings){
   var total=calcTotal(session);
-  var wfh=buildWFH(session.songs,session.clientName,session.dates,total.toFixed(2));
+  var bizName=(settings&&settings.businessName)||'';
+  var pName=(settings&&settings.producerName)||'';
+  var wfh=buildWFH(session.songs,session.clientName,session.dates,total.toFixed(2),pName);
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>WFH - '+session.invoiceNumber+'</title>'
     +'<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;color:#111;font-size:14px;line-height:1.5}'
     +'.p{max-width:700px;margin:48px auto;padding:0 40px}'
@@ -274,11 +283,11 @@ function openPrintWFH(session){
     +'@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}'
     +'</style></head><body><div class="p">'
     +'<div class="title">Work for Hire &amp; Sync Usage Contract</div>'
-    +'<div class="sub">Blue Amsterdam Studio &nbsp;&middot;&nbsp; Mason Douglas, Producer</div>'
+    +'<div class="sub">'+(bizName||'')+(bizName&&pName?' \u00b7 ':'')+(pName?pName+', Producer':'')+'</div>'
     +'<hr class="div">'
     +'<div class="body">'+wfh+'</div>'
     +'<div class="sigs">'
-    +'<div><div class="sl"></div><div class="sn">Mason Douglas &mdash; Producer</div><div class="sd">Date: ____________________</div></div>'
+    +'<div><div class="sl"></div><div class="sn">'+(pName||'___')+' &mdash; Producer</div><div class="sd">Date: ____________________</div></div>'
     +'<div><div class="sl"></div><div class="sn">Songwriter / Client</div><div class="sd">Date: ____________________</div></div>'
     +'</div></div><scr'+'ipt>setTimeout(function(){window.print();},700);</scr'+'ipt></body></html>';
   var w=window.open('','_blank');
@@ -316,8 +325,8 @@ function openMailto(session,settings){
     +'<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:600px;color:#1a1a1a">'
     // Header
     +'<div style="border-bottom:2px solid #EF9F27;padding-bottom:16px;margin-bottom:24px">'
-    +'<div style="font-size:20px;font-weight:700;color:#BA7517;letter-spacing:-0.5px">Blue Amsterdam Studio</div>'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#9a9590;margin-top:3px">Recording · Production · Publishing</div>'
+    +'<div style="font-size:20px;font-weight:700;color:#BA7517;letter-spacing:-0.5px">'+(settings.businessName||'')+'</div>'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#9a9590;margin-top:3px">'+(settings.businessTagline||'')+'</div>'
     +(email||phone?'<div style="font-size:12px;color:#6b6560;margin-top:6px">'+(email||'')+(email&&phone?' · ':''+(phone||''))+'</div>':'')
     +'</div>'
     // Greeting
@@ -356,10 +365,10 @@ function openMailto(session,settings){
     )
     +'</div>'
     // Sign off
-    +'<p style="font-size:13px;color:#6b6560;margin:0">Thanks,<br><strong style="color:#1a1a1a">Mason Douglas</strong><br>Blue Amsterdam Studio'+(phone?'<br>'+phone:'')+'</p>'
+    +'<p style="font-size:13px;color:#6b6560;margin:0">Thanks,<br><strong style="color:#1a1a1a">'+(settings.producerName||'')+'</strong><br>'+(settings.businessName||'')+(phone?'<br>'+phone:'')+'</p>'
     +'</div>';
 
-  var subject='Invoice '+session.invoiceNumber+' — Blue Amsterdam Studio';
+  var subject='Invoice '+session.invoiceNumber+(settings.businessName?' — '+settings.businessName:'');
 
   // Write to a hidden iframe so we can copy rich HTML to clipboard
   var gmailUrl='https://mail.google.com/mail/?view=cm&fs=1'
@@ -393,10 +402,17 @@ function Btn(props){
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 function LoginScreen(){
+  var _m=useState('signin'),mode=_m[0],setMode=_m[1]; // 'signin' | 'signup'
   var _s=useState(''),email=_s[0],setEmail=_s[1];
   var _p=useState(''),password=_p[0],setPassword=_p[1];
+  var _p2=useState(''),password2=_p2[0],setPassword2=_p2[1];
   var _l=useState(false),loading=_l[0],setLoading=_l[1];
   var _e=useState(''),error=_e[0],setError=_e[1];
+  var _cc=useState(false),checkEmail=_cc[0],setCheckEmail=_cc[1];
+
+  function switchMode(next){
+    setMode(next);setError('');setCheckEmail(false);setPassword('');setPassword2('');
+  }
   function doLogin(){
     if(!email||!password){setError('Enter your email and password.');return;}
     setLoading(true);setError('');
@@ -404,6 +420,37 @@ function LoginScreen(){
       if(r.error){setError(r.error.message);setLoading(false);}
     });
   }
+  function doSignup(){
+    if(!email||!password){setError('Enter your email and password.');return;}
+    if(password.length<6){setError('Password must be at least 6 characters.');return;}
+    if(password!==password2){setError('Passwords don\'t match.');return;}
+    setLoading(true);setError('');
+    sb.auth.signUp({email:email,password:password}).then(function(r){
+      if(r.error){setError(r.error.message);setLoading(false);return;}
+      // If email confirmation is required, Supabase returns a user but no session.
+      if(r.data&&r.data.user&&!r.data.session){
+        setCheckEmail(true);setLoading(false);
+      }
+      // If confirmation is off, onAuthStateChange in App() picks up the new session automatically.
+    });
+  }
+  function handleSubmit(){ if(mode==='signin') doLogin(); else doSignup(); }
+
+  if(checkEmail){
+    return h('div',{style:{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)'}},
+      h('div',{style:{width:'100%',maxWidth:380,padding:'0 20px'}},
+        h('div',{style:{textAlign:'center',marginBottom:32}},
+          h('div',{style:{fontSize:24,fontWeight:700,color:'var(--acc)',letterSpacing:'-.5px'}},'InVoice')
+        ),
+        h('div',{className:'card',style:{padding:28,textAlign:'center'}},
+          h('div',{style:{fontSize:15,fontWeight:600,marginBottom:8}},'Check your email'),
+          h('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6,marginBottom:18}},'We sent a confirmation link to '+email+'. Click it, then sign in below.'),
+          h('button',{onClick:function(){switchMode('signin');},className:'btn btn-sec',style:{width:'100%',justifyContent:'center',padding:'10px',fontSize:14}},'Back to sign in')
+        )
+      )
+    );
+  }
+
   return h('div',{style:{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)'}},
     h('div',{style:{width:'100%',maxWidth:380,padding:'0 20px'}},
       h('div',{style:{textAlign:'center',marginBottom:32}},
@@ -414,13 +461,24 @@ function LoginScreen(){
         error&&h('div',{className:'err-box'},error),
         h('div',{style:{marginBottom:14}},
           h('label',{className:'lbl'},'Email'),
-          h('input',{className:'inp',type:'email',value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')doLogin();},placeholder:'you@example.com',autoComplete:'email'})
+          h('input',{className:'inp',type:'email',value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')handleSubmit();},placeholder:'you@example.com',autoComplete:'email'})
         ),
-        h('div',{style:{marginBottom:20}},
+        h('div',{style:{marginBottom:mode==='signup'?14:20}},
           h('label',{className:'lbl'},'Password'),
-          h('input',{className:'inp',type:'password',value:password,onChange:function(e){setPassword(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')doLogin();},placeholder:'••••••••',autoComplete:'current-password'})
+          h('input',{className:'inp',type:'password',value:password,onChange:function(e){setPassword(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'&&mode==='signin')handleSubmit();},placeholder:'••••••••',autoComplete:mode==='signup'?'new-password':'current-password'})
         ),
-        h('button',{onClick:doLogin,disabled:loading,className:'btn btn-acc',style:{width:'100%',justifyContent:'center',padding:'10px',fontSize:14}},loading?'Signing in...':'Sign in')
+        mode==='signup'&&h('div',{style:{marginBottom:20}},
+          h('label',{className:'lbl'},'Confirm password'),
+          h('input',{className:'inp',type:'password',value:password2,onChange:function(e){setPassword2(e.target.value);},onKeyDown:function(e){if(e.key==='Enter')handleSubmit();},placeholder:'••••••••',autoComplete:'new-password'})
+        ),
+        h('button',{onClick:handleSubmit,disabled:loading,className:'btn btn-acc',style:{width:'100%',justifyContent:'center',padding:'10px',fontSize:14,marginBottom:14}},
+          loading?(mode==='signin'?'Signing in...':'Creating account...'):(mode==='signin'?'Sign in':'Create account')
+        ),
+        h('div',{style:{textAlign:'center',fontSize:12,color:'var(--text2)'}},
+          mode==='signin'
+            ?h('span',null,'Don\'t have an account? ',h('a',{href:'#',onClick:function(e){e.preventDefault();switchMode('signup');},style:{color:'var(--acc)',fontWeight:600,textDecoration:'none'}},'Sign up'))
+            :h('span',null,'Already have an account? ',h('a',{href:'#',onClick:function(e){e.preventDefault();switchMode('signin');},style:{color:'var(--acc)',fontWeight:600,textDecoration:'none'}},'Sign in'))
+        )
       )
     )
   );
@@ -598,8 +656,8 @@ function InvoiceView(props){
     h('div',{className:'card',style:{maxWidth:660}},
       h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',paddingBottom:18,borderBottom:'2px solid var(--acc-bo)',marginBottom:22}},
         h('div',null,
-          h('div',{style:{fontSize:20,fontWeight:700,color:'var(--acc)',letterSpacing:'-.3px'}},'Blue Amsterdam Studio'),
-          h('div',{style:{fontSize:10,textTransform:'uppercase',letterSpacing:2,color:'var(--text3)',marginTop:3}},'Recording · Production · Publishing'),
+          h('div',{style:{fontSize:20,fontWeight:700,color:'var(--acc)',letterSpacing:'-.3px'}},settings.businessName||''),
+          h('div',{style:{fontSize:10,textTransform:'uppercase',letterSpacing:2,color:'var(--text3)',marginTop:3}},settings.businessTagline||''),
           settings.email&&h('div',{style:{fontSize:12,color:'var(--text2)',marginTop:8}},settings.email),
           settings.phone&&h('div',{style:{fontSize:12,color:'var(--text2)'}},settings.phone)
         ),
@@ -610,7 +668,7 @@ function InvoiceView(props){
         )
       ),
       h('div',{className:'two-col',style:{marginBottom:18}},
-        h('div',null,h('div',{style:lbl},'From'),h('div',{style:{fontSize:15,fontWeight:600}},'Mason Douglas'),h('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6}},'Producer / Engineer',h('br'),'Nashville, TN')),
+        h('div',null,h('div',{style:lbl},'From'),h('div',{style:{fontSize:15,fontWeight:600}},settings.producerName||''),h('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6}},settings.producerTitle||'',settings.producerTitle&&settings.producerLocation&&h('br'),settings.producerLocation||'')),
         h('div',null,h('div',{style:lbl},'Bill to'),h('div',{style:{fontSize:15,fontWeight:600}},session.clientName),session.clientEmail&&h('div',{style:{fontSize:13,color:'var(--text2)'}},session.clientEmail))
       ),
       (session.songs||session.dates||session.notes)&&h('div',{style:{background:'var(--card2)',borderRadius:'var(--radius)',padding:'11px 14px',marginBottom:18}},
@@ -644,7 +702,7 @@ function InvoiceView(props){
           ppLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'PayPal'),h('img',{src:qr(ppLink),alt:'PayPal QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},settings.paypal.handle?'@'+settings.paypal.handle:ppLink)),
           vmLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Venmo'),h('img',{src:qr(vmLink),alt:'Venmo QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'@'+settings.venmo.handle)),
           zlLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Zelle'),h('img',{src:qr('zelle:'+zlLink),alt:'Zelle QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},zlLink)),
-          wsLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Wise'),h('img',{src:qr(wsLink),alt:'Wise QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},'@douglasroberth17'))
+          wsLink&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--acc)',marginBottom:7}},'Wise'),h('img',{src:qr(wsLink),alt:'Wise QR',style:{borderRadius:6,border:'0.5px solid var(--border)',display:'block'},width:96,height:96}),h('div',{style:{fontSize:11,color:'var(--text2)',marginTop:5}},settings.wise&&settings.wise.handle?'@'+settings.wise.handle:wsLink))
         )
       ),
       h('div',{style:{borderTop:'0.5px solid var(--border)',paddingTop:14}},
@@ -678,6 +736,11 @@ function SettingsView(props){
     h('div',{className:'card',style:{marginBottom:14}},
       h('div',{className:'sec-title'},'Studio contact'),
       h('div',{className:'grid2'},
+        h('div',null,h('label',{className:'lbl'},'Business name'),h('input',{className:'inp',value:form.businessName||'',onChange:function(e){set('businessName',e.target.value);},placeholder:'Your Studio Name'})),
+        h('div',null,h('label',{className:'lbl'},'Tagline'),h('input',{className:'inp',value:form.businessTagline||'',onChange:function(e){set('businessTagline',e.target.value);},placeholder:'Recording · Production · Publishing'})),
+        h('div',null,h('label',{className:'lbl'},'Your name'),h('input',{className:'inp',value:form.producerName||'',onChange:function(e){set('producerName',e.target.value);},placeholder:'Jane Smith'})),
+        h('div',null,h('label',{className:'lbl'},'Your title'),h('input',{className:'inp',value:form.producerTitle||'',onChange:function(e){set('producerTitle',e.target.value);},placeholder:'Producer / Engineer'})),
+        h('div',null,h('label',{className:'lbl'},'Location'),h('input',{className:'inp',value:form.producerLocation||'',onChange:function(e){set('producerLocation',e.target.value);},placeholder:'Nashville, TN'})),
         h('div',null,h('label',{className:'lbl'},'Email'),h('input',{className:'inp',value:form.email||'',onChange:function(e){set('email',e.target.value);},placeholder:'studio@email.com'})),
         h('div',null,h('label',{className:'lbl'},'Phone'),h('input',{className:'inp',value:form.phone||'',onChange:function(e){set('phone',e.target.value);},placeholder:'(615) 555-0100'})),
         h('div',{className:'span2'},h('label',{className:'lbl'},'WFH contract URL'),h('input',{className:'inp',value:form.wfhUrl||'',onChange:function(e){set('wfhUrl',e.target.value);},placeholder:'https://your-site.netlify.app/wfh-contract.html'}),
@@ -691,7 +754,9 @@ function SettingsView(props){
         h('div',null,h('label',{className:'lbl'},'PayPal.me link'),h('input',{className:'inp',value:form.paypal&&form.paypal.link||'',onChange:function(e){set('paypal.link',e.target.value);},placeholder:'https://paypal.me/...'})),
         h('div',null,h('label',{className:'lbl'},'Venmo handle'),h('input',{className:'inp',value:form.venmo&&form.venmo.handle||'',onChange:function(e){set('venmo.handle',e.target.value);},placeholder:'masondouglas'})),
         h('div',null,h('label',{className:'lbl'},'Zelle (phone or email)'),h('input',{className:'inp',value:form.zelle&&form.zelle.contact||'',onChange:function(e){set('zelle.contact',e.target.value);},placeholder:'(615) 555-0100'})),
-        h('div',null,h('label',{className:'lbl'},'Wise link'),h('input',{className:'inp',value:form.wise&&form.wise.link||'',onChange:function(e){set('wise.link',e.target.value);},placeholder:'https://wise.com/pay/me/...'}))
+        h('div',null,h('label',{className:'lbl'},'Wise link'),h('input',{className:'inp',value:form.wise&&form.wise.link||'',onChange:function(e){set('wise.link',e.target.value);},placeholder:'https://wise.com/pay/me/...'})),
+        h('div',null,h('label',{className:'lbl'},'Wise displayed handle'),h('input',{className:'inp',value:form.wise&&form.wise.handle||'',onChange:function(e){set('wise.handle',e.target.value);},placeholder:'yourname'}),
+          h('div',{style:{fontSize:11,color:'var(--text3)',marginTop:5}},'Shown as @handle under the Wise QR code.'))
       )
     ),
     h('div',{className:'card',style:{marginBottom:14}},
@@ -812,7 +877,7 @@ function App(){
     h('div',{className:'main'},
       page==='sessions'&&view==='list'&&h(SessionsView,{sessions:sessions,onNew:function(){setCurrent(null);setDuplicateFrom(null);setView('form');},onEdit:function(s){setCurrent(s);setDuplicateFrom(null);setView('form');},onView:function(s){setCurrent(s);setView('invoice');},onDelete:handleDeleteSession,onStatus:handleStatusChange,onDuplicate:handleDuplicateSession}),
       page==='sessions'&&view==='form'&&h(SessionForm,{session:current,settings:settings,nextInvoice:genInv(sessions),duplicateFrom:duplicateFrom,onCancel:goList,onSave:handleSaveSession,onStatus:handleStatusChange}),
-      page==='sessions'&&view==='invoice'&&current&&h(InvoiceView,{session:current,settings:settings,onBack:goList,onEdit:function(){setView('form');},onPrintInvoice:function(){openPrintInvoice(current,settings);},onPrintWFH:function(){openPrintWFH(current);},onEmail:function(){openMailto(current,settings);},onStatus:handleStatusChange}),
+      page==='sessions'&&view==='invoice'&&current&&h(InvoiceView,{session:current,settings:settings,onBack:goList,onEdit:function(){setView('form');},onPrintInvoice:function(){openPrintInvoice(current,settings);},onPrintWFH:function(){openPrintWFH(current,settings);},onEmail:function(){openMailto(current,settings);},onStatus:handleStatusChange}),
       page==='settings'&&h(SettingsView,{settings:settings,onSave:handleSaveSettings,userEmail:user.email,onLogout:function(){sb.auth.signOut();}})
     )
   );
