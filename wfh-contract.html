@@ -101,11 +101,11 @@ var DEFAULTS = {
 
 var studio   = params.get('studio')   || DEFAULTS.studio;
 var tagline  = params.get('tagline')  || DEFAULTS.tagline;
-var location = params.get('location') || DEFAULTS.location;
+var studioLocation = params.get('location') || DEFAULTS.location;
 var pName    = params.get('name')     || DEFAULTS.name;
 
 document.getElementById('hdr-studio').textContent = studio;
-document.getElementById('hdr-tag').textContent = tagline + (location ? ' · ' + location : '');
+document.getElementById('hdr-tag').textContent = tagline + (studioLocation ? ' · ' + studioLocation : '');
 document.getElementById('sig-producer').textContent = pName + ' — Producer';
 document.title = 'Work for Hire & Sync Usage Contract — ' + studio;
 
