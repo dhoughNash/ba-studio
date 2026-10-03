@@ -506,8 +506,7 @@ function SessionsView(props){
               h('div',{style:{flex:1,minWidth:0}},
                 h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
                   h('span',{style:{fontWeight:600,fontSize:15}},s.clientName||'Unnamed client'),
-                  h(Badge,{status:s.status}),
-                  s.exportedAt&&h('span',{className:'chip',style:{background:'var(--card2)',color:'var(--text2)',borderColor:'var(--border-s)'}},'Exported '+new Date(s.exportedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}))
+                  h(Badge,{status:s.status})
                 ),
                 h('div',{style:{fontSize:13,color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},
                   [s.songs,s.dates].filter(Boolean).join(' · ')||'No details'
@@ -517,12 +516,18 @@ function SessionsView(props){
                 h('div',{style:{fontSize:18,fontWeight:600,color:'var(--acc)'}},'$'+total.toFixed(2)),
                 h('div',{style:{fontSize:11,color:'var(--text3)'}},s.invoiceNumber)
               ),
+              h('div',{style:{width:16,flexShrink:0,textAlign:'center'}},
+                s.exportedAt&&h('span',{
+                  title:'Exported '+new Date(s.exportedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})+' — click to clear',
+                  onClick:function(){if(confirm('Clear the exported flag on '+(s.invoiceNumber||'this session')+'?'))onClearExport(s.id);},
+                  style:{color:'var(--ok)',fontSize:13,fontWeight:700,cursor:'pointer'}
+                },'✓')
+              ),
               h('div',{className:'li-actions',style:{display:'flex',gap:5,flexShrink:0}},
                 h(Btn,{onClick:function(){onView(s);},cls:'acc'},'Invoice'),
                 h(Btn,{onClick:function(){onEdit(s);}},'Edit'),
                 h(Btn,{onClick:function(){onDuplicate(s);}},'Duplicate'),
                 s.status!=='paid'&&h(Btn,{onClick:function(){onStatus(s.id,s.status==='draft'?'sent':'paid');}},s.status==='draft'?'Mark sent':'Mark paid'),
-                s.exportedAt&&h(Btn,{onClick:function(){if(confirm('Clear the exported flag on '+(s.invoiceNumber||'this session')+'?'))onClearExport(s.id);}},'Clear exported'),
                 h(Btn,{onClick:function(){if(confirm('Delete this session?'))onDelete(s.id);},cls:'dan'},'✕')
               )
             );
