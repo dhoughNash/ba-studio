@@ -479,6 +479,11 @@ function LoginScreen(){
 function SessionsView(props){
   var sessions=props.sessions,onNew=props.onNew,onEdit=props.onEdit,onView=props.onView,onDelete=props.onDelete,onStatus=props.onStatus,onDuplicate=props.onDuplicate,onExport=props.onExport,onClearExport=props.onClearExport;
   var newCount=sessions.filter(function(s){return s.status!=='draft'&&!s.exportedAt;}).length;
+  var _q=useState(''),q=_q[0],setQ=_q[1];
+  var qq=q.trim().toLowerCase();
+  var shown=qq?sessions.filter(function(s){
+    return [s.clientName,s.clientEmail,s.songs,s.dates,s.notes,s.invoiceNumber,s.status].join(' ').toLowerCase().indexOf(qq)>-1;
+  }):sessions;
   var paid=sessions.filter(function(s){return s.status==='paid';}).reduce(function(t,s){return t+calcTotal(s);},0);
   var outstanding=sessions.filter(function(s){return s.status==='sent';}).reduce(function(t,s){return t+calcTotal(s);},0);
   var counts={};
@@ -506,14 +511,19 @@ function SessionsView(props){
         );
       })
     ),
+    sessions.length>0&&h('div',{style:{marginBottom:14}},
+      h('input',{className:'inp',type:'search',value:q,onChange:function(e){setQ(e.target.value);},placeholder:'Search client, song, invoice #, date...'})
+    ),
     sessions.length===0
       ?h('div',{className:'empty'},
           h('div',{style:{fontSize:32,marginBottom:12}},'🎛'),
           h('div',{style:{fontSize:15,color:'var(--text2)',marginBottom:4}},'No sessions yet'),
           h('div',{style:{fontSize:13}},'Add your first Blue Amsterdam session to get started')
         )
+      :shown.length===0
+      ?h('div',{className:'empty'},h('div',{style:{fontSize:14}},'No sessions match your search'))
       :h('div',{className:'list'},
-          sessions.map(function(s){
+          shown.map(function(s){
             var total=calcTotal(s);
             return h('div',{key:s.id,className:'list-item'},
               h('div',{style:{flex:1,minWidth:0}},
